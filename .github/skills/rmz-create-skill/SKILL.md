@@ -11,7 +11,7 @@ Use this skill only to create a new custom skill for the rmz-ai-vm environment. 
 
 - Store every VM-wide skill in this repository at `.github/skills/<skill-name>/SKILL.md`.
 - Treat this repository as the source of truth. Do not create the only copy under `~/.copilot`, inside a project, or in another machine-local directory.
-- Use a concise, lowercase, kebab-case directory and matching `name` frontmatter value.
+- Use a concise, lowercase, kebab-case skill name beginning with `rmz-`; use it for both the directory and matching `name` frontmatter value.
 - Include YAML frontmatter with a `name` and a specific `description`. The description should say what the skill does and when Copilot should use it.
 - Add supporting scripts or references inside that skill's directory only when they materially help the skill perform its task. Keep instructions and resources versioned together.
 
