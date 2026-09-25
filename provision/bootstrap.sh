@@ -34,7 +34,7 @@ if ! command -v node >/dev/null 2>&1; then
   apt-get install --yes --no-install-recommends nodejs
 fi
 
-if ! command -v copilot >/dev/null 2>&1; then
+if [ ! -x /usr/local/bin/copilot ]; then
   curl --fail --silent --show-error https://gh.io/copilot-install |
     PREFIX=/usr/local bash
 fi
