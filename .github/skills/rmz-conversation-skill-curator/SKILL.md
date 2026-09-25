@@ -1,5 +1,5 @@
 ---
-name: conversation-skill-curator
+name: rmz-conversation-skill-curator
 description: Turn reusable workflows from a completed conversation into a focused Copilot skill, or improve a matching existing skill; use at the end of a conversation when it revealed durable guidance worth preserving.
 ---
 
