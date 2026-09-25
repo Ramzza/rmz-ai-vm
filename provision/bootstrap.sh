@@ -3,6 +3,7 @@ set -euo pipefail
 
 readonly DEV_USER="${1:-vagrant}"
 readonly DEV_HOME="$(getent passwd "${DEV_USER}" | cut -d: -f6)"
+readonly COPILOT_VERSION="1.0.88"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -30,12 +31,23 @@ apt-get install --yes --no-install-recommends \
 git lfs install --system
 
 if ! command -v node >/dev/null 2>&1; then
-  curl --fail --silent --show-error https://deb.nodesource.com/setup_22.x | bash -
+  install -d -m 0755 /etc/apt/keyrings
+  curl --fail --silent --show-error \
+    https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key |
+    gpg --dearmor --yes -o /etc/apt/keyrings/nodesource.gpg
+  chmod 0644 /etc/apt/keyrings/nodesource.gpg
+  printf '%s\n' \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+    > /etc/apt/sources.list.d/nodesource.list
+  apt-get update
   apt-get install --yes --no-install-recommends nodejs
 fi
 
-if [ ! -x /usr/local/bin/copilot ]; then
-  npm install --global @github/copilot
+install -d -o "${DEV_USER}" -g "${DEV_USER}" "${DEV_HOME}/.local"
+if [ ! -x "${DEV_HOME}/.local/bin/copilot" ]; then
+  runuser -u "${DEV_USER}" -- \
+    npm install --global --prefix "${DEV_HOME}/.local" \
+    "@github/copilot@${COPILOT_VERSION}"
 fi
 
 if ! command -v code >/dev/null 2>&1; then
@@ -60,6 +72,7 @@ fi
 
 eval "$(direnv hook bash)"
 
+export PATH="$HOME/.local/bin:$PATH"
 export EDITOR="${EDITOR:-nano}"
 export VISUAL="${VISUAL:-${EDITOR}}"
 export WORKSPACE="/workspace"

@@ -85,8 +85,10 @@ vagrant provision
 
 ## Installed tooling
 
-The provisioner installs Git, Git LFS, GitHub CLI, Node.js 22, the official Copilot CLI, Microsoft Visual Studio Code, Python 3 with virtual-environment support, ripgrep, fd, jq, direnv, tmux, zsh, build tools, and ShellCheck.
+The provisioner installs Git, Git LFS, GitHub CLI, Node.js 22, the pinned official Copilot CLI version `1.0.88`, Microsoft Visual Studio Code, Python 3 with virtual-environment support, ripgrep, fd, jq, direnv, tmux, zsh, build tools, and ShellCheck.
 
-The `copilot-auto` alias starts Copilot CLI; Autopilot itself is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
+The Copilot CLI is installed for the `vagrant` user under `~/.local/bin`; the provisioner adds that directory to `PATH`. The `copilot-auto` alias starts Copilot CLI; Autopilot itself is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
+
+Node.js is installed from the explicit, signed NodeSource APT repository configuration rather than by executing a remote setup script. To update the Copilot CLI version, change `COPILOT_VERSION` in `provision/bootstrap.sh` and recreate or reprovision the VM.
 
 The default VM is headless (`vb.gui = false`), so the graphical VS Code application is installed but is not displayed inside the VM unless you add a graphical desktop and display support. For a typical workflow, use VS Code on the host with the `/workspace` folder, or connect using VS Code Remote - SSH.
