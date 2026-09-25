@@ -1,6 +1,6 @@
 # Copilot CLI Ubuntu VM
 
-This is a small, reproducible Ubuntu 22.04 development VM for GitHub Copilot CLI. It uses [Vagrant](https://www.vagrantup.com/) with VirtualBox and keeps the project directory mounted at `/workspace`.
+This is a small, reproducible Ubuntu 22.04 development VM for GitHub Copilot CLI. It uses [Vagrant](https://www.vagrantup.com/) with VirtualBox and mounts the parent projects directory at `/workspace`.
 
 ## Host prerequisites
 
@@ -54,7 +54,7 @@ copilot
 
 On the first Copilot CLI launch, authenticate with `/login`, or provide `GH_TOKEN`/`GITHUB_TOKEN` when starting the VM. To use Autopilot mode, press `Shift+Tab` in Copilot CLI until Autopilot is selected. Copilot persists the selected mode in its user configuration.
 
-The mounted host directory is available at `/workspace`; edits made there remain on the host and are available after recreating the VM.
+The host directory containing this repository's parent is available at `/workspace`. This repository is therefore `/workspace/rmz-ai-vm`, and future projects can be created alongside it. Edits made there remain on the host and are available after recreating the VM.
 
 ## Recreate or tune the VM
 
