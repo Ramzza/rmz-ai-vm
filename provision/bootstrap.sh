@@ -4,6 +4,8 @@ set -euo pipefail
 readonly DEV_USER="${1:-vagrant}"
 readonly DEV_HOME="$(getent passwd "${DEV_USER}" | cut -d: -f6)"
 readonly COPILOT_VERSION="1.0.88"
+readonly SKILLS_SOURCE="${2:?Copilot skills source path is required}"
+readonly INSTRUCTIONS_SOURCE="${3:?Copilot instructions source path is required}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -48,6 +50,47 @@ if [ ! -x "${DEV_HOME}/.local/bin/copilot" ]; then
   runuser -u "${DEV_USER}" -- \
     npm install --global --prefix "${DEV_HOME}/.local" \
     "@github/copilot@${COPILOT_VERSION}"
+fi
+
+if [ ! -d "${SKILLS_SOURCE}" ]; then
+  printf 'Copilot skills directory not found: %s\n' "${SKILLS_SOURCE}" >&2
+  exit 1
+fi
+
+readonly COPILOT_SKILLS="${DEV_HOME}/.copilot/skills"
+install -d -o "${DEV_USER}" -g "${DEV_USER}" "${COPILOT_SKILLS}"
+for skill_path in "${SKILLS_SOURCE}"/*/; do
+  [ -f "${skill_path}SKILL.md" ] || continue
+  skill_name="${skill_path%/}"
+  skill_name="${skill_name##*/}"
+  skill_target="${COPILOT_SKILLS}/${skill_name}"
+
+  if [ -L "${skill_target}" ] && [ "$(readlink "${skill_target}")" = "${skill_path}" ]; then
+    continue
+  fi
+  if [ -e "${skill_target}" ] || [ -L "${skill_target}" ]; then
+    printf 'Skipping Copilot skill %s; target already exists: %s\n' \
+      "${skill_name}" "${skill_target}" >&2
+    continue
+  fi
+
+  ln -s "${skill_path}" "${skill_target}"
+done
+
+if [ ! -f "${INSTRUCTIONS_SOURCE}" ]; then
+  printf 'Copilot instructions file not found: %s\n' "${INSTRUCTIONS_SOURCE}" >&2
+  exit 1
+fi
+
+readonly INSTRUCTIONS_TARGET="${DEV_HOME}/.copilot/copilot-instructions.md"
+if [ -L "${INSTRUCTIONS_TARGET}" ] &&
+  [ "$(readlink "${INSTRUCTIONS_TARGET}")" = "${INSTRUCTIONS_SOURCE}" ]; then
+  :
+elif [ -e "${INSTRUCTIONS_TARGET}" ] || [ -L "${INSTRUCTIONS_TARGET}" ]; then
+  printf 'Skipping Copilot instructions; target already exists: %s\n' \
+    "${INSTRUCTIONS_TARGET}" >&2
+else
+  ln -s "${INSTRUCTIONS_SOURCE}" "${INSTRUCTIONS_TARGET}"
 fi
 
 if ! command -v code >/dev/null 2>&1; then
