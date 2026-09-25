@@ -35,8 +35,7 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 if [ ! -x /usr/local/bin/copilot ]; then
-  curl --fail --silent --show-error https://gh.io/copilot-install |
-    PREFIX=/usr/local bash
+  npm install --global @github/copilot
 fi
 
 if ! command -v code >/dev/null 2>&1; then
