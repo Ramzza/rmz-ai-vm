@@ -35,7 +35,8 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 if ! command -v copilot >/dev/null 2>&1; then
-  curl --fail --silent --show-error https://gh.io/copilot-install | bash
+  curl --fail --silent --show-error https://gh.io/copilot-install |
+    PREFIX=/usr/local bash
 fi
 
 if ! command -v code >/dev/null 2>&1; then

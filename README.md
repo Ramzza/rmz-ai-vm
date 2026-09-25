@@ -1,6 +1,6 @@
 # Copilot CLI Ubuntu VM
 
-This is a small, reproducible Ubuntu 24.04 development VM for GitHub Copilot CLI. It uses [Vagrant](https://www.vagrantup.com/) with VirtualBox and keeps the project directory mounted at `/workspace`.
+This is a small, reproducible Ubuntu 22.04 development VM for GitHub Copilot CLI. It uses [Vagrant](https://www.vagrantup.com/) with VirtualBox and keeps the project directory mounted at `/workspace`.
 
 ## Host prerequisites
 

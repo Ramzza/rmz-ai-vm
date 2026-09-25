@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "bento/ubuntu-24.04"
+  config.vm.box = "ubuntu/jammy64"
   config.vm.hostname = "copilot-dev"
+  config.vm.boot_timeout = 600
 
   config.vm.synced_folder ".", "/workspace", owner: "vagrant", group: "vagrant"
 
