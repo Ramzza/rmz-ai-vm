@@ -5,7 +5,10 @@ Vagrant.configure("2") do |config|
   config.vm.hostname = "copilot-dev"
   config.vm.boot_timeout = 600
 
-  config.vm.synced_folder ".", "/workspace", owner: "vagrant", group: "vagrant"
+  config.vm.synced_folder File.expand_path("..", __dir__),
+                          "/workspace",
+                          owner: "vagrant",
+                          group: "vagrant"
 
   config.vm.provider "virtualbox" do |vb|
     vb.name = "copilot-dev"
