@@ -26,6 +26,5 @@ Use this skill only to create a new custom skill for the rmz-ai-vm environment. 
 ## Provisioning and validation
 
 - The VM provisioner discovers skill directories under `.github/skills` and links them into the `vagrant` user's `~/.copilot/skills`. Preserve this layout so the skill is globally available in the VM and is backed by the mounted, version-controlled repository.
-- A newly added skill directory must be registered by running `vagrant provision` from the host in this repository; a Copilot session inside the VM cannot reprovision its own VM. If creating a skill from inside the VM, leave reprovisioning to the VM host/operator.
 - Check that the skill directory name matches its frontmatter `name`, that the YAML frontmatter parses, and that paths and commands in the instructions are accurate.
 - Update the VM README if the provisioning workflow or skill storage convention changes.
