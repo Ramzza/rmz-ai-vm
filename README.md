@@ -83,6 +83,14 @@ To rerun provisioning after changing `provision/bootstrap.sh`:
 vagrant provision
 ```
 
+## Run tests
+
+The VM includes [Bats](https://bats-core.readthedocs.io/). Run the test suite from the repository root:
+
+```sh
+bats tests
+```
+
 ## Copilot skills
 
 Keep VM-wide Copilot CLI skills in `.github/skills/<skill-name>/SKILL.md` in this repository. These files are versioned with the VM configuration. During provisioning, each skill directory is linked into the VM user's `~/.copilot/skills`, so the skills are available when working in any project and remain backed by this mounted repository.
