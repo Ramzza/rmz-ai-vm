@@ -89,6 +89,8 @@ Keep VM-wide Copilot CLI skills in `.github/skills/<skill-name>/SKILL.md` in thi
 
 Keep concise, global Copilot CLI instructions in `.github/copilot-instructions.md`. Provisioning links this file to `~/.copilot/copilot-instructions.md`, making it available across projects.
 
+VM-wide Copilot CLI settings managed by this repository belong in `provision/copilot-settings.json`. Provisioning merges those settings into `~/.copilot/settings.json` without replacing other user preferences; the Gists home tab is hidden by default. After changing the settings file while the VM is running, run `vagrant provision` from the host to apply it.
+
 After adding a skill or the instructions file while the VM is running, run `vagrant provision` from the host to register it. Edits to already-linked skill or instruction files are reflected immediately from the repository; there is no separate copy to keep in sync.
 
 ## Installed tooling

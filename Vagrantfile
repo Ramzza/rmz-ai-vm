@@ -22,6 +22,8 @@ Vagrant.configure("2") do |config|
     args: [
       ENV.fetch("VM_USER", "vagrant"),
       File.join("/workspace", File.basename(__dir__), ".github", "skills"),
-      File.join("/workspace", File.basename(__dir__), ".github", "copilot-instructions.md")
+      File.join("/workspace", File.basename(__dir__), ".github", "copilot-instructions.md"),
+      File.join("/workspace", File.basename(__dir__), "provision", "copilot-settings.json"),
+      File.join("/workspace", File.basename(__dir__), "provision", "configure-copilot-settings.sh")
     ]
 end

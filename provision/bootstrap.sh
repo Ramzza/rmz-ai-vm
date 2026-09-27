@@ -2,10 +2,13 @@
 set -euo pipefail
 
 readonly DEV_USER="${1:-vagrant}"
-readonly DEV_HOME="$(getent passwd "${DEV_USER}" | cut -d: -f6)"
+DEV_HOME="$(getent passwd "${DEV_USER}" | cut -d: -f6)"
+readonly DEV_HOME
 readonly COPILOT_VERSION="1.0.88"
 readonly SKILLS_SOURCE="${2:?Copilot skills source path is required}"
 readonly INSTRUCTIONS_SOURCE="${3:?Copilot instructions source path is required}"
+readonly COPILOT_SETTINGS_SOURCE="${4:?Copilot settings source path is required}"
+readonly COPILOT_SETTINGS_MERGER="${5:?Copilot settings merger path is required}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -82,6 +85,16 @@ if [ ! -f "${INSTRUCTIONS_SOURCE}" ]; then
   exit 1
 fi
 
+if [ ! -f "${COPILOT_SETTINGS_SOURCE}" ]; then
+  printf 'Copilot settings file not found: %s\n' "${COPILOT_SETTINGS_SOURCE}" >&2
+  exit 1
+fi
+
+if [ ! -f "${COPILOT_SETTINGS_MERGER}" ]; then
+  printf 'Copilot settings merger not found: %s\n' "${COPILOT_SETTINGS_MERGER}" >&2
+  exit 1
+fi
+
 readonly INSTRUCTIONS_TARGET="${DEV_HOME}/.copilot/copilot-instructions.md"
 if [ -L "${INSTRUCTIONS_TARGET}" ] &&
   [ "$(readlink "${INSTRUCTIONS_TARGET}")" = "${INSTRUCTIONS_SOURCE}" ]; then
@@ -92,6 +105,12 @@ elif [ -e "${INSTRUCTIONS_TARGET}" ] || [ -L "${INSTRUCTIONS_TARGET}" ]; then
 else
   ln -s "${INSTRUCTIONS_SOURCE}" "${INSTRUCTIONS_TARGET}"
 fi
+
+readonly COPILOT_SETTINGS_TARGET="${DEV_HOME}/.copilot/settings.json"
+bash "${COPILOT_SETTINGS_MERGER}" \
+  "${COPILOT_SETTINGS_SOURCE}" \
+  "${COPILOT_SETTINGS_TARGET}"
+chown "${DEV_USER}:${DEV_USER}" "${COPILOT_SETTINGS_TARGET}"
 
 if ! command -v code >/dev/null 2>&1; then
   install -d -m 0755 /etc/apt/keyrings
