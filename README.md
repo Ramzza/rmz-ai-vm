@@ -2,6 +2,8 @@
 
 This is a small, reproducible Ubuntu 22.04 development VM for GitHub Copilot CLI. It uses [Vagrant](https://www.vagrantup.com/) with VirtualBox and mounts the parent projects directory at `/workspace`.
 
+Business requirements are defined in [`PRD.md`](PRD.md), with every requirement mapped to automated tests.
+
 ## Host prerequisites
 
 - Vagrant
@@ -89,6 +91,7 @@ The VM includes [Bats](https://bats-core.readthedocs.io/). Run the test suite fr
 
 ```sh
 bats tests
+bash tests/shell-line-endings.sh
 ```
 
 ## Copilot skills
