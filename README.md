@@ -7,7 +7,9 @@ This is a small, reproducible Ubuntu 22.04 development VM for GitHub Copilot CLI
 - Vagrant
 - VirtualBox
 - Hardware virtualization enabled in firmware
-- At least 4 GB of host RAM available for the VM
+- At least 8 GB of host RAM, with 6 GB available for the VM
+
+The VM defaults to 2 CPUs and 6 GB of memory. Set `VM_CPUS` or `VM_MEMORY_MB` before `vagrant up` to change these allocations.
 
 ### Windows installation
 

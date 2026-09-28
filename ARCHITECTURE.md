@@ -13,7 +13,7 @@ This repository defines a reproducible Ubuntu development VM. Vagrant configures
 
 `vagrant up` creates or starts the VM and runs provisioning on initial creation by default. The root provisioner uses paths under `/workspace/<repository>` to find the versioned skills, instructions, and settings, then switches to the configured guest user for the user-home links and settings it manages there. Project files are edited in the mounted workspace, so they persist independently of VM recreation; installed tools and user-home state belong to the guest.
 
-`vagrant provision` or `vagrant up --provision` reapplies setup after provisioning changes. VM CPU and memory can be set with `VM_CPUS` and `VM_MEMORY_MB`; `VM_NAME` overrides the VirtualBox machine name. Copilot settings changes are applied by reprovisioning.
+`vagrant provision` or `vagrant up --provision` reapplies setup after provisioning changes. The VM defaults to 2 CPUs and 6144 MB of memory; `VM_CPUS` and `VM_MEMORY_MB` override these defaults, and `VM_NAME` overrides the VirtualBox machine name. Copilot settings changes are applied by reprovisioning.
 
 ## Validation
 

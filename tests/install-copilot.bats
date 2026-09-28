@@ -109,6 +109,14 @@ EOF
   [ "${status}" -eq 0 ]
 }
 
+@test "defaults the VM memory to 6 GiB" {
+  run grep -F \
+    'vb.memory = ENV.fetch("VM_MEMORY_MB", "6144").to_i' \
+    "${REPO_ROOT}/Vagrantfile"
+
+  [ "${status}" -eq 0 ]
+}
+
 @test "bootstrap provisions from Vagrant's temporary script path" {
   PROVISIONER_DIRECTORY="${TEST_DIRECTORY}/vagrant-tmp"
   PROVISIONER_SCRIPT="${PROVISIONER_DIRECTORY}/vagrant-shell"
@@ -153,4 +161,7 @@ EOF
   [ -L "${TEST_HOME}/.copilot/copilot-instructions.md" ]
   [ "$(readlink "${TEST_HOME}/.copilot/copilot-instructions.md")" = \
     "${REPO_ROOT}/.github/copilot-instructions.md" ]
+  [ -L "${TEST_HOME}/.copilot/skills/rmz-create-skill" ]
+  [ "$(readlink "${TEST_HOME}/.copilot/skills/rmz-create-skill")" = \
+    "${REPO_ROOT}/.github/skills/rmz-create-skill/" ]
 }
