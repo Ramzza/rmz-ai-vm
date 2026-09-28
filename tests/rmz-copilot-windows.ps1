@@ -157,6 +157,7 @@ try {
         Pop-Location
     }
 
+    $global:LASTEXITCODE = 0
     Write-Output 'PowerShell rmz-copilot tests passed.'
 }
 finally {
