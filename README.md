@@ -2,6 +2,8 @@
 
 This is a small, reproducible Ubuntu 22.04 development VM for GitHub Copilot CLI. It uses [Vagrant](https://www.vagrantup.com/) with VirtualBox and mounts the parent projects directory at `/workspace`.
 
+Business requirements are defined in [`PRD.md`](PRD.md), with every requirement mapped to automated tests.
+
 ## Host prerequisites
 
 - Vagrant
@@ -44,6 +46,38 @@ sudo usermod -aG vboxusers "$USER"
 ```
 
 ## Create and use the VM
+
+### Start with `rmz-copilot` from the host
+
+Run the setup script once from this repository to add `rmz-copilot` to your current user's shell profile.
+
+**Windows PowerShell:**
+
+```powershell
+.\scripts\setup-rmz-copilot.ps1
+```
+
+Open a new PowerShell session, then run:
+
+```powershell
+rmz-copilot
+```
+
+**Linux Bash or Zsh:**
+
+```bash
+bash scripts/setup-rmz-copilot.sh
+```
+
+Open a new terminal, then run:
+
+```bash
+rmz-copilot
+```
+
+The command runs on the host: it changes to this repository, runs `vagrant up`, and then runs `vagrant ssh` only if startup succeeds. After connecting, use `cd /workspace` to work in the mounted projects directory.
+
+### Manual startup
 
 From this directory:
 
@@ -107,6 +141,7 @@ The VM includes [Bats](https://bats-core.readthedocs.io/). Run the unit tests fr
 
 ```sh
 bats tests
+bash tests/shell-line-endings.sh
 ```
 
 The default suite does not boot a VM. To run the separate end-to-end Vagrant smoke test, use a host with Vagrant, VirtualBox, hardware virtualization, and internet access:

@@ -92,7 +92,7 @@ teardown() {
   rm -rf -- "${TEST_DIRECTORY}"
 }
 
-@test "reconciles the pinned Copilot package" {
+@test "PRD-003: reconciles the pinned Copilot package" {
   run env \
     PATH="${MOCK_BIN}:${PATH}" \
     INSTALL_LOG="${INSTALL_LOG}" \
@@ -109,7 +109,7 @@ EOF
   [ "${status}" -eq 0 ]
 }
 
-@test "defaults the VM memory to 6 GiB" {
+@test "PRD-002: defaults the VM memory to 6 GiB" {
   run grep -F \
     'vb.memory = ENV.fetch("VM_MEMORY_MB", "6144").to_i' \
     "${REPO_ROOT}/Vagrantfile"
@@ -117,7 +117,7 @@ EOF
   [ "${status}" -eq 0 ]
 }
 
-@test "bootstrap provisions from Vagrant's temporary script path" {
+@test "PRD-003: bootstrap provisions from Vagrant's temporary script path" {
   PROVISIONER_DIRECTORY="${TEST_DIRECTORY}/vagrant-tmp"
   PROVISIONER_SCRIPT="${PROVISIONER_DIRECTORY}/vagrant-shell"
   mkdir -p "${PROVISIONER_DIRECTORY}"

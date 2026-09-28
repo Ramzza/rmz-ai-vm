@@ -3,7 +3,7 @@
 setup() {
   REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
   SETTINGS_SOURCE="${REPO_ROOT}/provision/copilot-settings.json"
-  SETTINGS_MERGER="${REPO_ROOT}/provision/configure-copilot-settings.sh"
+  SETTINGS_MERGER="${SETTINGS_MERGER_PATH:-${REPO_ROOT}/provision/configure-copilot-settings.sh}"
   TEST_DIRECTORY="$(mktemp -d)"
   SETTINGS_TARGET="${TEST_DIRECTORY}/.copilot/settings.json"
 }
@@ -12,7 +12,7 @@ teardown() {
   rm -rf -- "${TEST_DIRECTORY}"
 }
 
-@test "creates settings from the managed defaults" {
+@test "PRD-004: creates settings from the managed defaults" {
   run bash "${SETTINGS_MERGER}" "${SETTINGS_SOURCE}" "${SETTINGS_TARGET}"
 
   [ "${status}" -eq 0 ]
@@ -24,7 +24,7 @@ teardown() {
   [ "${status}" -eq 0 ]
 }
 
-@test "merges managed settings and preserves user preferences" {
+@test "PRD-004: merges managed settings and preserves user preferences" {
   mkdir -p "$(dirname "${SETTINGS_TARGET}")"
   cat >"${SETTINGS_TARGET}" <<'EOF'
 {
@@ -49,7 +49,7 @@ EOF
   [ "${status}" -eq 0 ]
 }
 
-@test "does not change settings when run repeatedly" {
+@test "PRD-004: does not change settings when run repeatedly" {
   run bash "${SETTINGS_MERGER}" "${SETTINGS_SOURCE}" "${SETTINGS_TARGET}"
   [ "${status}" -eq 0 ]
   cp "${SETTINGS_TARGET}" "${TEST_DIRECTORY}/before.json"
@@ -57,11 +57,15 @@ EOF
   run bash "${SETTINGS_MERGER}" "${SETTINGS_SOURCE}" "${SETTINGS_TARGET}"
 
   [ "${status}" -eq 0 ]
-  run cmp "${TEST_DIRECTORY}/before.json" "${SETTINGS_TARGET}"
+  run jq -S . "${TEST_DIRECTORY}/before.json"
   [ "${status}" -eq 0 ]
+  before_settings="${output}"
+  run jq -S . "${SETTINGS_TARGET}"
+  [ "${status}" -eq 0 ]
+  [ "${output}" = "${before_settings}" ]
 }
 
-@test "preserves malformed user settings when merging fails" {
+@test "PRD-004: preserves malformed user settings when merging fails" {
   mkdir -p "$(dirname "${SETTINGS_TARGET}")"
   printf '{invalid json\n' >"${SETTINGS_TARGET}"
 
@@ -72,13 +76,19 @@ EOF
   [ "${status}" -eq 0 ]
 }
 
-@test "fails when the managed settings file is missing" {
+@test "PRD-004: preserves settings when the managed settings file is missing" {
+  mkdir -p "$(dirname "${SETTINGS_TARGET}")"
+  printf '{"theme":"dim"}\n' >"${SETTINGS_TARGET}"
+  cp "${SETTINGS_TARGET}" "${TEST_DIRECTORY}/before.json"
+
   run bash "${SETTINGS_MERGER}" "${TEST_DIRECTORY}/missing.json" "${SETTINGS_TARGET}"
 
   [ "${status}" -ne 0 ]
+  run cmp "${TEST_DIRECTORY}/before.json" "${SETTINGS_TARGET}"
+  [ "${status}" -eq 0 ]
 }
 
-@test "rejects an invalid managed model without changing existing settings" {
+@test "PRD-004: rejects an invalid managed model without changing existing settings" {
   bash "${SETTINGS_MERGER}" "${SETTINGS_SOURCE}" "${SETTINGS_TARGET}"
   cp "${SETTINGS_TARGET}" "${TEST_DIRECTORY}/before.json"
   jq '.model = null' "${SETTINGS_SOURCE}" >"${TEST_DIRECTORY}/invalid-settings.json"
@@ -92,7 +102,7 @@ EOF
   [ "${status}" -eq 0 ]
 }
 
-@test "rejects an unsupported managed effort without changing existing settings" {
+@test "PRD-004: rejects an unsupported managed effort without changing existing settings" {
   bash "${SETTINGS_MERGER}" "${SETTINGS_SOURCE}" "${SETTINGS_TARGET}"
   cp "${SETTINGS_TARGET}" "${TEST_DIRECTORY}/before.json"
   jq '.effortLevel = "unsupported"' "${SETTINGS_SOURCE}" >"${TEST_DIRECTORY}/invalid-settings.json"
@@ -106,7 +116,7 @@ EOF
   [ "${status}" -eq 0 ]
 }
 
-@test "preserves existing settings when managed settings are malformed" {
+@test "PRD-004: preserves existing settings when managed settings are malformed" {
   printf '{invalid json\n' >"${TEST_DIRECTORY}/invalid-settings.json"
   mkdir -p "$(dirname "${SETTINGS_TARGET}")"
   printf '{"theme":"dim"}\n' >"${SETTINGS_TARGET}"
