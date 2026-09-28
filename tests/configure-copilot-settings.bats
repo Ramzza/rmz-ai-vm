@@ -16,7 +16,11 @@ teardown() {
   run bash "${SETTINGS_MERGER}" "${SETTINGS_SOURCE}" "${SETTINGS_TARGET}"
 
   [ "${status}" -eq 0 ]
-  run jq -e '.tabs.hide == ["gists"]' "${SETTINGS_TARGET}"
+  run jq -e '
+    .model == "gpt-6-luna"
+    and .effortLevel == "max"
+    and .tabs.hide == ["gists"]
+  ' "${SETTINGS_TARGET}"
   [ "${status}" -eq 0 ]
 }
 
@@ -37,6 +41,8 @@ EOF
   [ "${status}" -eq 0 ]
   run jq -e '
     .theme == "dim"
+    and .model == "gpt-6-luna"
+    and .effortLevel == "max"
     and .tabs.sort == ["issues", "gists"]
     and .tabs.hide == ["issues", "gists"]
   ' "${SETTINGS_TARGET}"
@@ -70,6 +76,34 @@ EOF
   run bash "${SETTINGS_MERGER}" "${TEST_DIRECTORY}/missing.json" "${SETTINGS_TARGET}"
 
   [ "${status}" -ne 0 ]
+}
+
+@test "rejects an invalid managed model without changing existing settings" {
+  bash "${SETTINGS_MERGER}" "${SETTINGS_SOURCE}" "${SETTINGS_TARGET}"
+  cp "${SETTINGS_TARGET}" "${TEST_DIRECTORY}/before.json"
+  jq '.model = null' "${SETTINGS_SOURCE}" >"${TEST_DIRECTORY}/invalid-settings.json"
+
+  run bash "${SETTINGS_MERGER}" \
+    "${TEST_DIRECTORY}/invalid-settings.json" \
+    "${SETTINGS_TARGET}"
+
+  [ "${status}" -ne 0 ]
+  run cmp "${TEST_DIRECTORY}/before.json" "${SETTINGS_TARGET}"
+  [ "${status}" -eq 0 ]
+}
+
+@test "rejects an unsupported managed effort without changing existing settings" {
+  bash "${SETTINGS_MERGER}" "${SETTINGS_SOURCE}" "${SETTINGS_TARGET}"
+  cp "${SETTINGS_TARGET}" "${TEST_DIRECTORY}/before.json"
+  jq '.effortLevel = "unsupported"' "${SETTINGS_SOURCE}" >"${TEST_DIRECTORY}/invalid-settings.json"
+
+  run bash "${SETTINGS_MERGER}" \
+    "${TEST_DIRECTORY}/invalid-settings.json" \
+    "${SETTINGS_TARGET}"
+
+  [ "${status}" -ne 0 ]
+  run cmp "${TEST_DIRECTORY}/before.json" "${SETTINGS_TARGET}"
+  [ "${status}" -eq 0 ]
 }
 
 @test "preserves existing settings when managed settings are malformed" {
