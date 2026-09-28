@@ -15,6 +15,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install --yes --no-install-recommends \
   build-essential \
+  bats \
   ca-certificates \
   curl \
   direnv \

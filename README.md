@@ -83,6 +83,14 @@ To rerun provisioning after changing `provision/bootstrap.sh`:
 vagrant provision
 ```
 
+## Run tests
+
+The VM includes [Bats](https://bats-core.readthedocs.io/). Run the test suite from the repository root:
+
+```sh
+bats tests
+```
+
 ## Copilot skills
 
 Keep VM-wide Copilot CLI skills in `.github/skills/<skill-name>/SKILL.md` in this repository. These files are versioned with the VM configuration. During provisioning, each skill directory is linked into the VM user's `~/.copilot/skills`, so the skills are available when working in any project and remain backed by this mounted repository.
@@ -95,7 +103,7 @@ After adding a skill or the instructions file while the VM is running, run `vagr
 
 ## Installed tooling
 
-The provisioner installs Git, Git LFS, GitHub CLI, Node.js 22, the pinned official Copilot CLI version `1.0.88`, Microsoft Visual Studio Code, Python 3 with virtual-environment support, ripgrep, fd, jq, direnv, tmux, zsh, build tools, and ShellCheck.
+The provisioner installs Git, Git LFS, GitHub CLI, Node.js 22, the pinned official Copilot CLI version `1.0.88`, Microsoft Visual Studio Code, Python 3 with virtual-environment support, ripgrep, fd, jq, direnv, tmux, zsh, build tools, ShellCheck, and Bats.
 
 The Copilot CLI is installed for the `vagrant` user under `~/.local/bin`; the provisioner adds that directory to `PATH`. The `copilot-auto` alias starts Copilot CLI; Autopilot itself is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
 
