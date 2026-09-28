@@ -50,11 +50,10 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 install -d -o "${DEV_USER}" -g "${DEV_USER}" "${DEV_HOME}/.local"
-if [ ! -x "${DEV_HOME}/.local/bin/copilot" ]; then
-  runuser -u "${DEV_USER}" -- \
-    npm install --global --prefix "${DEV_HOME}/.local" \
-    "@github/copilot@${COPILOT_VERSION}"
-fi
+bash "$(dirname "$0")/install-copilot.sh" \
+  "${DEV_USER}" \
+  "${DEV_HOME}" \
+  "${COPILOT_VERSION}"
 
 if [ ! -d "${SKILLS_SOURCE}" ]; then
   printf 'Copilot skills directory not found: %s\n' "${SKILLS_SOURCE}" >&2

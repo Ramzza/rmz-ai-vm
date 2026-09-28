@@ -83,6 +83,22 @@ To rerun provisioning after changing `provision/bootstrap.sh`:
 vagrant provision
 ```
 
+## Copilot CLI recovery
+
+If Copilot exits unexpectedly and the terminal begins printing mouse-report sequences, run `reset` or open a new terminal. A `no platform package found` error indicates an incomplete or mismatched Copilot CLI installation; repair the pinned installation with:
+
+```sh
+vagrant provision
+```
+
+If the process was terminated with `SIGKILL`, check for an out-of-memory kill from inside the VM:
+
+```sh
+journalctl -k --since "10 minutes ago" | grep -Ei 'oom|out of memory|killed process'
+```
+
+Increase the VM memory with `VM_MEMORY_MB` if the kernel log confirms memory pressure, then restart the VM.
+
 ## Run tests
 
 The VM includes [Bats](https://bats-core.readthedocs.io/). Run the test suite from the repository root:
@@ -107,6 +123,6 @@ The provisioner installs Git, Git LFS, GitHub CLI, Node.js 22, the pinned offici
 
 The Copilot CLI is installed for the `vagrant` user under `~/.local/bin`; the provisioner adds that directory to `PATH`. The `copilot-auto` alias starts Copilot CLI; Autopilot itself is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
 
-Node.js is installed from the explicit, signed NodeSource APT repository configuration rather than by executing a remote setup script. To update the Copilot CLI version, change `COPILOT_VERSION` in `provision/bootstrap.sh` and recreate or reprovision the VM.
+Node.js is installed from the explicit, signed NodeSource APT repository configuration rather than by executing a remote setup script. To update the Copilot CLI version, change `COPILOT_VERSION` in `provision/bootstrap.sh` and recreate or reprovision the VM. Reprovisioning always reconciles the pinned package, repairing incomplete platform dependencies even when the `copilot` launcher already exists.
 
 The default VM is headless (`vb.gui = false`), so the graphical VS Code application is installed but is not displayed inside the VM unless you add a graphical desktop and display support. For a typical workflow, use VS Code on the host with the `/workspace` folder, or connect using VS Code Remote - SSH.
