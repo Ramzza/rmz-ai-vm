@@ -75,23 +75,24 @@ if bash "${SETTINGS_MERGER}" "${TEST_DIRECTORY}/invalid-settings.json" "${SETTIN
   printf 'Expected an invalid managed model to fail\n' >&2
   exit 1
 fi
-grep -qxF '{invalid json' "${SETTINGS_TARGET}"
+cmp "${TEST_DIRECTORY}/before.json" "${SETTINGS_TARGET}"
 
 jq '.effortLevel = "unsupported"' "${SETTINGS_SOURCE}" >"${TEST_DIRECTORY}/invalid-settings.json"
 if bash "${SETTINGS_MERGER}" "${TEST_DIRECTORY}/invalid-settings.json" "${SETTINGS_TARGET}" 2>/dev/null; then
   printf 'Expected an unsupported managed effort level to fail\n' >&2
   exit 1
 fi
-grep -qxF '{invalid json' "${SETTINGS_TARGET}"
+cmp "${TEST_DIRECTORY}/before.json" "${SETTINGS_TARGET}"
 
 if bash "${SETTINGS_MERGER}" "${TEST_DIRECTORY}/missing.json" "${SETTINGS_TARGET}" 2>/dev/null; then
   printf 'Expected a missing managed settings file to fail\n' >&2
   exit 1
 fi
+cmp "${TEST_DIRECTORY}/before.json" "${SETTINGS_TARGET}"
 
 printf '{invalid json\n' >"${TEST_DIRECTORY}/invalid-settings.json"
 if bash "${SETTINGS_MERGER}" "${TEST_DIRECTORY}/invalid-settings.json" "${SETTINGS_TARGET}" 2>/dev/null; then
   printf 'Expected malformed managed settings to fail\n' >&2
   exit 1
 fi
-grep -qxF '{invalid json' "${SETTINGS_TARGET}"
+cmp "${TEST_DIRECTORY}/before.json" "${SETTINGS_TARGET}"
