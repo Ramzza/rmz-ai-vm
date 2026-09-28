@@ -101,11 +101,19 @@ Increase the VM memory with `VM_MEMORY_MB` if the kernel log confirms memory pre
 
 ## Run tests
 
-The VM includes [Bats](https://bats-core.readthedocs.io/). Run the test suite from the repository root:
+The VM includes [Bats](https://bats-core.readthedocs.io/). Run the unit tests from the repository root:
 
 ```sh
 bats tests
 ```
+
+The default suite does not boot a VM. To run the separate end-to-end Vagrant smoke test, use a host with Vagrant, VirtualBox, hardware virtualization, and internet access:
+
+```sh
+RUN_VAGRANT_SMOKE=1 bats tests/vagrant-smoke.bats
+```
+
+The smoke test uses an isolated project copy, a unique VirtualBox name, and a temporary `VAGRANT_HOME`; it checks that Copilot runs and its managed settings match the repository, then destroys the test VM.
 
 ## Copilot skills
 
