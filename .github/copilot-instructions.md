@@ -7,3 +7,4 @@ Use TypeScript for new projects when practical and prefer type-safe, idiomatic T
 Never commit secrets or personal data; always work as if you are in a public repository.
 Format every pull request description as clear GitHub Markdown, use real line breaks (not escaped `\n`), and verify the rendered body after creating or updating it.
 When creating GitHub repositories, match the public visibility, MIT license, default-branch PR ruleset, secret scanning with push protection, and Dependabot security settings of `Ramzza/rmz-ai-vm`.
+When creating or updating skills, prefer scripts for deterministic, repeatable work to reduce token use and improve reliability.
