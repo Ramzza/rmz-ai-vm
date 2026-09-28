@@ -1,0 +1,26 @@
+name: Build and test
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install test tools
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends --yes bats jq
+
+      - name: Build
+        run: |
+          bash -n provision/bootstrap.sh provision/configure-copilot-settings.sh tests/shell-line-endings.sh
+          ruby -c Vagrantfile
+          jq empty provision/copilot-settings.json
+
+      - name: Test
+        run: |
+          bats tests
+          bash tests/shell-line-endings.sh
