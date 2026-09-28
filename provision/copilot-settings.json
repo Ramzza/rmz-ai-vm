@@ -1,6 +1,6 @@
 {
   "model": "gpt-6-luna",
-  "effortLevel": "xhigh",
+  "effortLevel": "max",
   "tabs": {
     "hide": [
       "gists"

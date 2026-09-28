@@ -15,7 +15,7 @@ jq -e '
   and (
     .effortLevel as $effort
     | ($effort | type) == "string"
-      and (["low", "medium", "high", "xhigh"] | index($effort)) != null
+      and (["low", "medium", "high", "xhigh", "max"] | index($effort)) != null
   )
 ' \
   "${SETTINGS_SOURCE}" >/dev/null
