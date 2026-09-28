@@ -30,10 +30,11 @@ trap 'rm -f "${TEMP_FILE}"' EXIT
 
 if [[ -f "${SETTINGS_TARGET}" ]]; then
   jq --slurpfile managed "${SETTINGS_SOURCE}" '
-    . + ($managed[0] | del(.tabs))
-    | .tabs = ((.tabs // {}) + ($managed[0].tabs // {}))
+    (.tabs // {}) as $user_tabs
+    | . + ($managed[0] | del(.tabs))
+    | .tabs = ($user_tabs + ($managed[0].tabs // {}))
     | .tabs.hide = (
-        (.tabs.hide // []) as $existing
+        ($user_tabs.hide // []) as $existing
         | $existing + [
             ($managed[0].tabs.hide // [])[]
             | select(. as $tab | ($existing | index($tab)) == null)
