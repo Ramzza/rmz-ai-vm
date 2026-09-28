@@ -9,7 +9,15 @@ if [[ ! -f "${SETTINGS_SOURCE}" ]]; then
   exit 1
 fi
 
-jq -e '.tabs.hide | type == "array" and all(.[]; type == "string")' \
+jq -e '
+  (.tabs.hide | type == "array" and all(.[]; type == "string"))
+  and (if (.model | type) == "string" then (.model | length) > 0 else false end)
+  and (
+    .effortLevel as $effort
+    | ($effort | type) == "string"
+      and (["low", "medium", "high", "xhigh"] | index($effort)) != null
+  )
+' \
   "${SETTINGS_SOURCE}" >/dev/null
 
 SETTINGS_DIRECTORY="$(dirname "${SETTINGS_TARGET}")"
@@ -22,7 +30,8 @@ trap 'rm -f "${TEMP_FILE}"' EXIT
 
 if [[ -f "${SETTINGS_TARGET}" ]]; then
   jq --slurpfile managed "${SETTINGS_SOURCE}" '
-    .tabs = ((.tabs // {}) + ($managed[0].tabs // {}))
+    . + ($managed[0] | del(.tabs))
+    | .tabs = ((.tabs // {}) + ($managed[0].tabs // {}))
     | .tabs.hide = (
         (.tabs.hide // []) as $existing
         | $existing + [

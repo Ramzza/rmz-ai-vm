@@ -22,11 +22,17 @@ trap cleanup EXIT
 
 readonly SETTINGS_TARGET="${TEST_DIRECTORY}/.copilot/settings.json"
 bash "${SETTINGS_MERGER}" "${SETTINGS_SOURCE}" "${SETTINGS_TARGET}"
-jq -e '.tabs.hide == ["gists"]' "${SETTINGS_TARGET}" >/dev/null
+jq -e '
+  .model == "gpt-6-luna"
+  and .effortLevel == "xhigh"
+  and .tabs.hide == ["gists"]
+' "${SETTINGS_TARGET}" >/dev/null
 
 cat >"${SETTINGS_TARGET}" <<'EOF'
 {
   "theme": "dim",
+  "model": "auto",
+  "effortLevel": "low",
   "tabs": {
     "sort": ["issues", "gists"],
     "hide": ["issues"]
@@ -37,6 +43,8 @@ EOF
 bash "${SETTINGS_MERGER}" "${SETTINGS_SOURCE}" "${SETTINGS_TARGET}"
 jq -e '
   .theme == "dim"
+  and .model == "gpt-6-luna"
+  and .effortLevel == "xhigh"
   and .tabs.sort == ["issues", "gists"]
   and .tabs.hide == ["issues", "gists"]
 ' "${SETTINGS_TARGET}" >/dev/null
@@ -48,6 +56,20 @@ cmp "${TEST_DIRECTORY}/before.json" "${SETTINGS_TARGET}"
 printf '{invalid json\n' >"${SETTINGS_TARGET}"
 if bash "${SETTINGS_MERGER}" "${SETTINGS_SOURCE}" "${SETTINGS_TARGET}"; then
   printf 'Expected malformed user settings to fail\n' >&2
+  exit 1
+fi
+grep -qxF '{invalid json' "${SETTINGS_TARGET}"
+
+jq '.model = null' "${SETTINGS_SOURCE}" >"${TEST_DIRECTORY}/invalid-settings.json"
+if bash "${SETTINGS_MERGER}" "${TEST_DIRECTORY}/invalid-settings.json" "${SETTINGS_TARGET}" 2>/dev/null; then
+  printf 'Expected an invalid managed model to fail\n' >&2
+  exit 1
+fi
+grep -qxF '{invalid json' "${SETTINGS_TARGET}"
+
+jq '.effortLevel = "max"' "${SETTINGS_SOURCE}" >"${TEST_DIRECTORY}/invalid-settings.json"
+if bash "${SETTINGS_MERGER}" "${TEST_DIRECTORY}/invalid-settings.json" "${SETTINGS_TARGET}" 2>/dev/null; then
+  printf 'Expected an unsupported managed effort level to fail\n' >&2
   exit 1
 fi
 grep -qxF '{invalid json' "${SETTINGS_TARGET}"
