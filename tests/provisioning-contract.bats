@@ -87,7 +87,8 @@ teardown() {
     "${REPO_ROOT}/.github/skills" \
     "${REPO_ROOT}/.github/copilot-instructions.md" \
     "${REPO_ROOT}/provision/copilot-settings.json" \
-    "${REPO_ROOT}/provision/configure-copilot-settings.sh"
+    "${REPO_ROOT}/provision/configure-copilot-settings.sh" \
+    "${REPO_ROOT}/provision/install-copilot.sh"
 
   [ "${status}" -eq 0 ]
   [ -x "${TEST_DEV_HOME}/.local/bin/copilot" ]

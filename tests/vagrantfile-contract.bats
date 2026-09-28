@@ -19,7 +19,8 @@ assert_contains() {
 
 @test "PRD-002: supports default and override VM resource settings" {
   assert_contains 'ENV.fetch("VM_CPUS", "2").to_i'
-  assert_contains 'ENV.fetch("VM_MEMORY_MB", "4096").to_i'
+  assert_contains 'ENV.fetch("VM_MEMORY_MB", "6144").to_i'
+  assert_contains 'ENV.fetch("VM_NAME", "copilot-dev")'
 }
 
 @test "PRD-003: passes the selected user and repository assets to bootstrap" {
@@ -29,4 +30,5 @@ assert_contains() {
   assert_contains 'File.join("/workspace", File.basename(__dir__), ".github", "copilot-instructions.md")'
   assert_contains 'File.join("/workspace", File.basename(__dir__), "provision", "copilot-settings.json")'
   assert_contains 'File.join("/workspace", File.basename(__dir__), "provision", "configure-copilot-settings.sh")'
+  assert_contains 'File.join("/workspace", File.basename(__dir__), "provision", "install-copilot.sh")'
 }

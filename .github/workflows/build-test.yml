@@ -1,6 +1,14 @@
 name: Build and test
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 permissions:
   contents: read
@@ -16,7 +24,7 @@ jobs:
 
       - name: Build
         run: |
-          bash -n provision/bootstrap.sh provision/configure-copilot-settings.sh tests/shell-line-endings.sh
+          bash -n provision/bootstrap.sh provision/configure-copilot-settings.sh provision/install-copilot.sh tests/shell-line-endings.sh
           ruby -c Vagrantfile
           jq empty provision/copilot-settings.json
 
