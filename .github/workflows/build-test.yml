@@ -24,7 +24,7 @@ jobs:
 
       - name: Build
         run: |
-          bash -n provision/bootstrap.sh provision/configure-copilot-settings.sh provision/install-copilot.sh tests/shell-line-endings.sh
+          bash -n provision/bootstrap.sh provision/configure-copilot-settings.sh provision/install-copilot.sh scripts/rmz-copilot.sh scripts/setup-rmz-copilot.sh tests/shell-line-endings.sh
           ruby -c Vagrantfile
           jq empty provision/copilot-settings.json
 
@@ -32,3 +32,12 @@ jobs:
         run: |
           bats tests
           bash tests/shell-line-endings.sh
+
+  test-windows-host-command:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test PowerShell host command
+        shell: pwsh
+        run: ./tests/rmz-copilot-windows.ps1

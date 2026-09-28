@@ -14,5 +14,7 @@ Provide a reproducible Ubuntu development VM for GitHub Copilot CLI while keepin
   **Verification:** `tests/vagrantfile-contract.bats::PRD-003`; `tests/provisioning-contract.bats::PRD-003`; `tests/install-copilot.bats::PRD-003` tests for package reconciliation and bootstrap provisioning; `tests/vagrant-smoke.bats`.
 - **PRD-004 - Safe managed preferences:** Managed Copilot settings enforce the configured model, effort, and hidden tabs; they are validated and applied idempotently, preserve unrelated user preferences, and fail without corrupting existing settings when managed input is invalid or missing.
   **Verification:** `tests/configure-copilot-settings.bats` tests prefixed `PRD-004`.
+- **PRD-005 - Host-side Copilot launcher:** A host command starts Vagrant from this repository on the host, runs `vagrant up` before `vagrant ssh`, and can be installed for Bash/Zsh on Linux or PowerShell on Windows.
+  **Verification:** `tests/rmz-copilot.bats` tests prefixed `PRD-005`; `tests/rmz-copilot-windows.ps1` in the Windows CI job.
 
 The Vagrant smoke test is an opt-in end-to-end check requiring Vagrant, VirtualBox, hardware virtualization, and internet access.
