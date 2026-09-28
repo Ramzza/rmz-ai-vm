@@ -6,5 +6,5 @@ Every line of code must be covered by unit tests; add or update tests for any co
 Use TypeScript for new projects when practical and prefer type-safe, idiomatic TS over JavaScript.
 Never commit secrets or personal data; always work as if you are in a public repository.
 Format every pull request description as clear GitHub Markdown, use real line breaks (not escaped `\n`), and verify the rendered body after creating or updating it.
-When creating a pull request, automatically assign `copilot` as a reviewer.
+When creating a pull request, automatically request a review from Copilot using `copilot-pull-request-reviewer[bot]`.
 When creating GitHub repositories, match the public visibility, MIT license, default-branch PR ruleset, secret scanning with push protection, and Dependabot security settings of `Ramzza/rmz-ai-vm`.
