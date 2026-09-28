@@ -69,6 +69,7 @@ if bash "${SETTINGS_MERGER}" "${SETTINGS_SOURCE}" "${SETTINGS_TARGET}"; then
 fi
 grep -qxF '{invalid json' "${SETTINGS_TARGET}"
 
+cp "${TEST_DIRECTORY}/before.json" "${SETTINGS_TARGET}"
 jq '.model = null' "${SETTINGS_SOURCE}" >"${TEST_DIRECTORY}/invalid-settings.json"
 if bash "${SETTINGS_MERGER}" "${TEST_DIRECTORY}/invalid-settings.json" "${SETTINGS_TARGET}" 2>/dev/null; then
   printf 'Expected an invalid managed model to fail\n' >&2
