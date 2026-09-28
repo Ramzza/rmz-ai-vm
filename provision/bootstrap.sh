@@ -9,6 +9,7 @@ readonly SKILLS_SOURCE="${2:?Copilot skills source path is required}"
 readonly INSTRUCTIONS_SOURCE="${3:?Copilot instructions source path is required}"
 readonly COPILOT_SETTINGS_SOURCE="${4:?Copilot settings source path is required}"
 readonly COPILOT_SETTINGS_MERGER="${5:?Copilot settings merger path is required}"
+readonly COPILOT_INSTALLER="${6:?Copilot installer path is required}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -50,7 +51,11 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 install -d -o "${DEV_USER}" -g "${DEV_USER}" "${DEV_HOME}/.local"
-bash "$(dirname "$0")/install-copilot.sh" \
+if [ ! -f "${COPILOT_INSTALLER}" ]; then
+  printf 'Copilot installer not found: %s\n' "${COPILOT_INSTALLER}" >&2
+  exit 1
+fi
+bash "${COPILOT_INSTALLER}" \
   "${DEV_USER}" \
   "${DEV_HOME}" \
   "${COPILOT_VERSION}"

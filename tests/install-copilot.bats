@@ -53,7 +53,7 @@ EOF
 
 @test "bootstrap delegates Copilot installation to the reconciler" {
   run grep -F \
-    'bash "$(dirname "$0")/install-copilot.sh" \' \
+    'bash "${COPILOT_INSTALLER}" \' \
     "${BOOTSTRAP}"
 
   [ "${status}" -eq 0 ]
