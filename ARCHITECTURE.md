@@ -5,7 +5,7 @@ This repository defines a reproducible Ubuntu development VM. Vagrant configures
 ## Components and provisioning
 
 - `Vagrantfile` selects the Ubuntu 22.04 box, configures VM resources, and mounts the repository's parent directory at `/workspace`. The shell provisioner runs as root; `bootstrap.sh` configures the guest account named by `VM_USER` (`vagrant` by default) for user-scoped setup in that account's home directory.
-- `vm-config.json` holds the editable VirtualBox name, CPU count, and memory allocation defaults loaded by `Vagrantfile`; `VM_NAME`, `VM_CPUS`, and `VM_MEMORY_MB` can override them.
+- `vm-config.json` holds the optional VirtualBox name and editable CPU/memory defaults loaded by `Vagrantfile`. A `null` name delegates to Vagrant's instance-specific name generation to avoid fixed VM-directory collisions; `VM_NAME`, `VM_CPUS`, and `VM_MEMORY_MB` can override the settings.
 - `provision/bootstrap.sh` installs system tools, Node.js, the pinned Copilot CLI, and VS Code. Its `install-copilot.sh` helper reconciles the pinned package on every provisioning run, so incomplete platform dependencies are repaired. It also registers the repository's Copilot configuration in the guest user's home directory.
 - `scripts/rmz-copilot.sh` and `scripts/rmz-copilot.ps1` run on the host, resolve the repository root, and start Vagrant before opening SSH. Their setup scripts register the `rmz-copilot` function in the user's Bash/Zsh or PowerShell profile.
 - `.github/skills/*/SKILL.md` and `.github/copilot-instructions.md` are linked into `~/.copilot`; edits to these host-mounted files are immediately visible in the guest.

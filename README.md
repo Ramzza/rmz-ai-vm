@@ -93,14 +93,14 @@ The host directory containing this repository's parent is available at `/workspa
 
 ## Recreate or tune the VM
 
-Edit `vm-config.json` to change the VirtualBox machine name, CPU count, or memory allocation (`memory_mb`, in MB). For a running VM, apply CPU or memory changes with `vagrant reload`.
+Edit `vm-config.json` to set a fixed VirtualBox machine name, CPU count, or memory allocation (`memory_mb`, in MB). The default `"name": null` lets Vagrant generate a unique VM name instead of reusing a global `copilot-dev` directory. For a running VM, apply CPU or memory changes with `vagrant reload`.
 
 ```sh
 vagrant destroy -f
 vagrant up
 ```
 
-The `VM_NAME`, `VM_CPUS`, and `VM_MEMORY_MB` environment variables override the corresponding config-file values for a Vagrant command:
+The `VM_NAME`, `VM_CPUS`, and `VM_MEMORY_MB` environment variables override the corresponding config-file values for a Vagrant command. Use `VM_NAME` only when you need a fixed name that is not already used by another VM or leftover VM directory:
 
 ```sh
 # PowerShell
