@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+require "json"
+
+vm_settings = JSON.parse(File.read(File.join(__dir__, "vm-config.json")))
+
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/jammy64"
   config.vm.hostname = "copilot-dev"
@@ -11,9 +15,9 @@ Vagrant.configure("2") do |config|
                           group: "vagrant"
 
   config.vm.provider "virtualbox" do |vb|
-    vb.name = ENV.fetch("VM_NAME", "copilot-dev")
-    vb.cpus = ENV.fetch("VM_CPUS", "2").to_i
-    vb.memory = ENV.fetch("VM_MEMORY_MB", "6144").to_i
+    vb.name = ENV.fetch("VM_NAME", vm_settings.fetch("name"))
+    vb.cpus = Integer(ENV.fetch("VM_CPUS", vm_settings.fetch("cpus").to_s), 10)
+    vb.memory = Integer(ENV.fetch("VM_MEMORY_MB", vm_settings.fetch("memory_mb").to_s), 10)
     vb.gui = false
   end
 
