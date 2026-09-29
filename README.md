@@ -9,9 +9,9 @@ Business requirements are defined in [`PRD.md`](PRD.md), with every requirement 
 - Vagrant
 - VirtualBox
 - Hardware virtualization enabled in firmware
-- At least 8 GB of host RAM, with 6 GB available for the VM
+- At least 16 GB of host RAM is recommended, with 8 GB available for the VM
 
-The VM defaults to 2 CPUs and 6 GB of memory. Set `VM_CPUS` or `VM_MEMORY_MB` before `vagrant up` to change these allocations.
+The VM defaults to 4 CPUs and 8 GB of memory. Its editable VirtualBox attributes are in the root-level `vm-config.json`.
 
 ### Windows installation
 
@@ -94,23 +94,25 @@ The host directory containing this repository's parent is available at `/workspa
 
 ## Recreate or tune the VM
 
+Edit `vm-config.json` to change the VirtualBox machine name, CPU count, or memory allocation (`memory_mb`, in MB). For a running VM, apply CPU or memory changes with `vagrant reload`.
+
 ```sh
 vagrant destroy -f
 vagrant up
 ```
 
-Optional environment variables adjust the VM before `vagrant up`:
+The `VM_NAME`, `VM_CPUS`, and `VM_MEMORY_MB` environment variables override the corresponding config-file values for a Vagrant command:
 
 ```sh
 # PowerShell
-$env:VM_CPUS = "4"
-$env:VM_MEMORY_MB = "8192"
+$env:VM_CPUS = "6"
+$env:VM_MEMORY_MB = "12288"
 vagrant up
 ```
 
 ```sh
 # Bash
-VM_CPUS=4 VM_MEMORY_MB=8192 vagrant up
+VM_CPUS=6 VM_MEMORY_MB=12288 vagrant up
 ```
 
 To rerun provisioning after changing `provision/bootstrap.sh`:
@@ -133,7 +135,7 @@ If the process was terminated with `SIGKILL`, check for an out-of-memory kill fr
 journalctl -k --since "10 minutes ago" | grep -Ei 'oom|out of memory|killed process'
 ```
 
-Increase the VM memory with `VM_MEMORY_MB` if the kernel log confirms memory pressure, then restart the VM.
+Increase `memory_mb` in `vm-config.json` (or override it with `VM_MEMORY_MB`) if the kernel log confirms memory pressure, then reload the VM.
 
 ## Run tests
 

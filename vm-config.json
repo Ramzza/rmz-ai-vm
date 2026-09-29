@@ -1,0 +1,5 @@
+{
+  "name": "copilot-dev",
+  "cpus": 4,
+  "memory_mb": 8192
+}

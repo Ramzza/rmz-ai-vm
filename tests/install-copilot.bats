@@ -109,10 +109,11 @@ EOF
   [ "${status}" -eq 0 ]
 }
 
-@test "PRD-002: defaults the VM memory to 6 GiB" {
-  run grep -F \
-    'vb.memory = ENV.fetch("VM_MEMORY_MB", "6144").to_i' \
-    "${REPO_ROOT}/Vagrantfile"
+@test "PRD-002: defaults the VM memory to 8 GiB" {
+  run ruby -rjson -e '
+    memory_mb = JSON.parse(File.read(ARGV.fetch(0))).fetch("memory_mb")
+    abort "Unexpected VM memory: #{memory_mb}" unless memory_mb == 8192
+  ' "${REPO_ROOT}/vm-config.json"
 
   [ "${status}" -eq 0 ]
 }
