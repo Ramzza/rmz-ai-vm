@@ -9,10 +9,6 @@ try {
     }
 
     & vagrant ssh
-    $sshExitCode = $LASTEXITCODE
-    if ($sshExitCode -ne 0) {
-        throw "vagrant ssh failed with exit code $sshExitCode."
-    }
 }
 finally {
     Pop-Location
