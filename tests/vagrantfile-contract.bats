@@ -71,7 +71,8 @@ end
 
 load ARGV.fetch(0)
 settings = Vagrant.config.vm.provider_settings
-puts [settings.name, settings.cpus, settings.memory].join("|")
+name = settings.name.nil? ? "auto" : settings.name
+puts [name, settings.cpus, settings.memory].join("|")
 RUBY
 }
 
@@ -82,11 +83,11 @@ RUBY
   assert_contains 'vb.gui = false'
 }
 
-@test "PRD-002: defaults to 4 CPUs and 8192 MB" {
+@test "PRD-002: lets Vagrant generate the name and defaults to 4 CPUs and 8192 MB" {
   run evaluate_vagrantfile "${VAGRANTFILE}" \
     -u VM_CPUS -u VM_MEMORY_MB -u VM_NAME
   [ "${status}" -eq 0 ]
-  [ "${output}" = "copilot-dev|4|8192" ]
+  [ "${output}" = "auto|4|8192" ]
 }
 
 @test "PRD-002: exposes VM defaults in a root-level JSON config" {
@@ -94,7 +95,7 @@ RUBY
   run ruby -rjson -e '
     settings = JSON.parse(File.read(ARGV.fetch(0)))
     expected = {
-      "name" => "copilot-dev",
+      "name" => nil,
       "cpus" => 4,
       "memory_mb" => 8192
     }

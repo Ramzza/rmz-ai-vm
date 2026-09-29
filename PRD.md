@@ -8,7 +8,7 @@ Provide a reproducible Ubuntu development VM for GitHub Copilot CLI while keepin
 
 - **PRD-001 - Persistent development environment:** `vagrant up` provides a headless Ubuntu 22.04 VM and mounts the host directory containing this repository at `/workspace`, so project files persist outside the guest.
   **Verification:** `tests/vagrantfile-contract.bats::PRD-001`.
-- **PRD-002 - Editable VM resources:** Root-level `vm-config.json` lists the VirtualBox name, CPU count, and memory in MB; defaults are 4 CPUs and 8192 MB. `VM_NAME`, `VM_CPUS`, and `VM_MEMORY_MB` override their respective settings.
+- **PRD-002 - Editable VM resources:** Root-level `vm-config.json` lists the optional VirtualBox name, CPU count, and memory in MB; a `null` name lets Vagrant generate a unique machine name by default. Resource defaults are 4 CPUs and 8192 MB. `VM_NAME`, `VM_CPUS`, and `VM_MEMORY_MB` override their respective settings.
   **Verification:** `tests/vagrantfile-contract.bats` tests prefixed `PRD-002`.
 - **PRD-003 - Repository-managed Copilot setup:** Provisioning uses `VM_USER` (default `vagrant`), reconciles the pinned Copilot CLI package on every run, and connects that account to the repository's skills and instructions.
   **Verification:** `tests/vagrantfile-contract.bats::PRD-003`; `tests/provisioning-contract.bats::PRD-003`; `tests/install-copilot.bats::PRD-003` tests for package reconciliation and bootstrap provisioning; `tests/vagrant-smoke.bats`.

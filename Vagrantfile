@@ -3,6 +3,7 @@
 require "json"
 
 vm_settings = JSON.parse(File.read(File.join(__dir__, "vm-config.json")))
+vm_name = ENV.fetch("VM_NAME", vm_settings.fetch("name"))
 
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/jammy64"
@@ -15,7 +16,7 @@ Vagrant.configure("2") do |config|
                           group: "vagrant"
 
   config.vm.provider "virtualbox" do |vb|
-    vb.name = ENV.fetch("VM_NAME", vm_settings.fetch("name"))
+    vb.name = vm_name unless vm_name.nil?
     vb.cpus = Integer(ENV.fetch("VM_CPUS", vm_settings.fetch("cpus").to_s), 10)
     vb.memory = Integer(ENV.fetch("VM_MEMORY_MB", vm_settings.fetch("memory_mb").to_s), 10)
     vb.gui = false
