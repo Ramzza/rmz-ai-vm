@@ -7,6 +7,7 @@ Every repository must have a concise root `PRD.md` as the single source of truth
 Code must not contradict the PRD; tests must fail when a requirement is unmet.
 Before implementing behavior changes, write the tests first and verify they fail against unchanged production code for the expected assertion; if behavior already exists, prove they fail under a controlled mutation. Use `rmz-test` and the appropriate language-specific testing skill.
 Use TypeScript for new projects when practical and prefer type-safe, idiomatic TS over JavaScript.
+Never return early from a function or exit a script early.
 Never commit secrets or personal data; always work as if you are in a public repository.
 Format every pull request description as clear GitHub Markdown, use real line breaks (not escaped `\n`), and verify the rendered body after creating or updating it.
 When creating GitHub repositories, match the public visibility, MIT license, default-branch PR ruleset, secret scanning with push protection, and Dependabot security settings of `Ramzza/rmz-ai-vm`.
