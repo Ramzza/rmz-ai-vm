@@ -167,7 +167,7 @@ After adding a skill or the instructions file while the VM is running, run `vagr
 
 The provisioner installs Git, Git LFS, GitHub CLI, Node.js 22, the pinned official Copilot CLI version `1.0.88`, Microsoft Visual Studio Code, Python 3 with virtual-environment support, ripgrep, fd, jq, direnv, tmux, zsh, build tools, ShellCheck, and Bats.
 
-The Copilot CLI is installed for the `vagrant` user under `~/.local/bin`; the provisioner adds that directory to `PATH`. The `copilot-auto` alias starts Copilot CLI; Autopilot itself is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
+The Copilot CLI is installed for the `vagrant` user under `~/.local/bin`; the provisioner adds that directory to `PATH`. In Bash, `copilot` temporarily disables shell job control while the CLI runs and restores it on exit, keeping the interactive UI usable in the VM terminal. The `copilot-auto` alias starts the same CLI; Autopilot itself is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
 
 Node.js is installed from the explicit, signed NodeSource APT repository configuration rather than by executing a remote setup script. To update the Copilot CLI version, change `COPILOT_VERSION` in `provision/bootstrap.sh` and recreate or reprovision the VM. Reprovisioning always reconciles the pinned package, repairing incomplete platform dependencies even when the `copilot` launcher already exists.
 

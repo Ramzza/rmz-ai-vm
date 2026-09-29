@@ -118,6 +118,83 @@ teardown() {
   [ "${status}" -eq 0 ]
 }
 
+@test "PRD-003: launches Copilot without job control and restores Bash job control" {
+  run bash "${BOOTSTRAP_SCRIPT}" \
+    "${TEST_DEV_USER}" \
+    "${REPO_ROOT}/.github/skills" \
+    "${REPO_ROOT}/.github/copilot-instructions.md" \
+    "${REPO_ROOT}/provision/copilot-settings.json" \
+    "${REPO_ROOT}/provision/configure-copilot-settings.sh" \
+    "${REPO_ROOT}/provision/install-copilot.sh"
+  [ "${status}" -eq 0 ]
+
+  cat >"${TEST_DEV_HOME}/.local/bin/copilot" <<'CLI'
+#!/usr/bin/env bash
+set -euo pipefail
+parent_pgid="$(ps -o pgid= -p "${PPID}" | tr -d '[:space:]')"
+copilot_pgid="$(ps -o pgid= -p "$$" | tr -d '[:space:]')"
+if [ "${parent_pgid}" = "${copilot_pgid}" ]; then
+  printf 'job-control=disabled\n'
+else
+  printf 'job-control=enabled\n'
+fi
+printf 'arguments=%s\n' "$*"
+exit "${COPILOT_TEST_EXIT:-23}"
+CLI
+  chmod +x "${TEST_DEV_HOME}/.local/bin/copilot"
+
+  TEST_WORKSPACE="${TEST_DIRECTORY}/workspace"
+  mkdir -p "${TEST_WORKSPACE}"
+  export TEST_WORKSPACE
+
+  run env \
+    "HOME=${TEST_DEV_HOME}" \
+    "PATH=${MOCK_BIN}:${PATH}" \
+    "TEST_WORKSPACE=${TEST_WORKSPACE}" \
+    bash -c '
+      cd() {
+        if [[ "$#" -eq 1 && "$1" == "/workspace" ]]; then
+          builtin cd -- "${TEST_WORKSPACE}"
+        else
+          builtin cd -- "$@"
+        fi
+      }
+      source "$HOME/.bashrc.d-copilot"
+
+      if COPILOT_TEST_EXIT=0 copilot --success; then
+        copilot_status=0
+      else
+        copilot_status=$?
+      fi
+
+      case "$-" in
+        *m*) job_control=enabled ;;
+        *) job_control=disabled ;;
+      esac
+
+      printf "job-control-after=%s\ncopilot-exit=%s\n" \
+        "$job_control" "$copilot_status"
+
+      set -m
+      if COPILOT_TEST_EXIT=23 copilot --probe; then
+        copilot_status=0
+      else
+        copilot_status=$?
+      fi
+
+      case "$-" in
+        *m*) job_control=enabled ;;
+        *) job_control=disabled ;;
+      esac
+
+      printf "job-control-after=%s\ncopilot-exit=%s\n" \
+        "$job_control" "$copilot_status"
+    '
+
+  [ "${status}" -eq 0 ]
+  [ "${output}" = $'job-control=disabled\narguments=--success\njob-control-after=disabled\ncopilot-exit=0\njob-control=disabled\narguments=--probe\njob-control-after=enabled\ncopilot-exit=23' ]
+}
+
 @test "PRD-006: starts Bash sessions in the mounted workspace" {
   run bash "${BOOTSTRAP_SCRIPT}" \
     "${TEST_DEV_USER}" \

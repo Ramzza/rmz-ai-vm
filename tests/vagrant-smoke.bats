@@ -65,6 +65,13 @@ jq -e --slurpfile expected \
    and .effortLevel == $expected[0].effortLevel
    and .tabs.hide == $expected[0].tabs.hide' \
   "$HOME/.copilot/settings.json" >/dev/null
+if timeout --kill-after=1s 4s \
+  script -q -e -c 'bash -ic copilot' /dev/null >/dev/null 2>&1; then
+  startup_status=0
+else
+  startup_status=$?
+fi
+test "$startup_status" -eq 124
 EOF
 )"
 

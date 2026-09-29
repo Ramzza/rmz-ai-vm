@@ -146,6 +146,29 @@ export WORKSPACE="/workspace"
 
 alias croot='cd /workspace'
 alias gs='git status --short --branch'
+copilot() {
+  local monitor_was_enabled=0
+  local copilot_status=0
+
+  case "${-}" in
+    *m*)
+      set +m
+      monitor_was_enabled=1
+      ;;
+  esac
+
+  if command copilot "$@"; then
+    copilot_status=0
+  else
+    copilot_status=$?
+  fi
+
+  if [ "${monitor_was_enabled}" -eq 1 ]; then
+    set -m
+  fi
+
+  return "${copilot_status}"
+}
 alias copilot-auto='copilot'
 
 cd /workspace
