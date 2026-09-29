@@ -138,20 +138,25 @@ try {
 
         $global:VagrantCalls.Clear()
         $global:VagrantUpExitCode = 0
-        $global:VagrantSshExitCode = 29
-        $sshFailureThrown = $false
-        try {
-            rmz-copilot
+        foreach ($guestExitCode in @(1, 29)) {
+            $global:VagrantSshExitCode = $guestExitCode
+            $sshExitThrown = $false
+            try {
+                rmz-copilot
+            }
+            catch {
+                $sshExitThrown = $true
+            }
+            Assert-True (-not $sshExitThrown) `
+                "The launcher must not treat guest shell exit code '$guestExitCode' as an SSH failure."
+            Assert-Equal $guestExitCode.ToString() $global:LASTEXITCODE.ToString() `
+                'The launcher must preserve the guest shell exit code.'
+            Assert-Equal '2' $global:VagrantCalls.Count.ToString() `
+                'The launcher must attempt SSH after successful vagrant up.'
+            Assert-Equal $tempDirectory (Get-Location).Path `
+                'The launcher must restore the caller location after the SSH session ends.'
+            $global:VagrantCalls.Clear()
         }
-        catch {
-            $sshFailureThrown = $true
-        }
-        Assert-True $sshFailureThrown `
-            'The launcher must report a failed vagrant ssh.'
-        Assert-Equal '2' $global:VagrantCalls.Count.ToString() `
-            'The launcher must attempt SSH after successful vagrant up.'
-        Assert-Equal $tempDirectory (Get-Location).Path `
-            'The launcher must restore the caller location after SSH fails.'
     }
     finally {
         Pop-Location
