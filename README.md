@@ -75,7 +75,7 @@ Open a new terminal, then run:
 rmz-copilot
 ```
 
-The command runs on the host: it changes to this repository, runs `vagrant up`, and then runs `vagrant ssh` only if startup succeeds. After connecting, use `cd /workspace` to work in the mounted projects directory.
+The command runs on the host: it changes to this repository, runs `vagrant up`, and then runs `vagrant ssh` only if startup succeeds. The guest shell starts in `/workspace`, the mounted projects directory.
 
 ### Manual startup
 
@@ -84,7 +84,6 @@ From this directory:
 ```sh
 vagrant up
 vagrant ssh
-cd /workspace
 copilot
 ```
 

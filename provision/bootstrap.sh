@@ -147,6 +147,8 @@ export WORKSPACE="/workspace"
 alias croot='cd /workspace'
 alias gs='git status --short --branch'
 alias copilot-auto='copilot'
+
+cd /workspace
 EOF
 
 touch "${DEV_HOME}/.bashrc"

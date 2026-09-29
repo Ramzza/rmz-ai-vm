@@ -13,7 +13,7 @@ setup() {
   export TEST_DEV_HOME TEST_DEV_USER TEST_NPM_LOG TEST_RUNUSER_LOG
   export PATH="${MOCK_BIN}:${PATH}"
 
-  for command in apt-get git node code chown; do
+  for command in apt-get git node code chown direnv; do
     printf '%s\n' '#!/usr/bin/env bash' 'exit 0' >"${MOCK_BIN}/${command}"
     chmod +x "${MOCK_BIN}/${command}"
   done
@@ -116,4 +116,33 @@ teardown() {
     and .tabs.hide == ["issues", "gists"]
   ' "${TEST_DEV_HOME}/.copilot/settings.json"
   [ "${status}" -eq 0 ]
+}
+
+@test "PRD-006: starts Bash sessions in the mounted workspace" {
+  run bash "${BOOTSTRAP_SCRIPT}" \
+    "${TEST_DEV_USER}" \
+    "${REPO_ROOT}/.github/skills" \
+    "${REPO_ROOT}/.github/copilot-instructions.md" \
+    "${REPO_ROOT}/provision/copilot-settings.json" \
+    "${REPO_ROOT}/provision/configure-copilot-settings.sh" \
+    "${REPO_ROOT}/provision/install-copilot.sh"
+  [ "${status}" -eq 0 ]
+
+  TEST_WORKSPACE="${TEST_DIRECTORY}/workspace"
+  mkdir -p "${TEST_WORKSPACE}"
+  export TEST_WORKSPACE
+
+  run env HOME="${TEST_DEV_HOME}" bash -c '
+    cd() {
+      if [[ "$#" -eq 1 && "$1" == "/workspace" ]]; then
+        builtin cd -- "${TEST_WORKSPACE}"
+      else
+        builtin cd -- "$@"
+      fi
+    }
+    source "$HOME/.bashrc"
+    pwd
+  '
+  [ "${status}" -eq 0 ]
+  [ "${output}" = "${TEST_WORKSPACE}" ]
 }
