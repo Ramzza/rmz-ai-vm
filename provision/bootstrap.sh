@@ -4,7 +4,7 @@ set -euo pipefail
 readonly DEV_USER="${1:-vagrant}"
 DEV_HOME="$(getent passwd "${DEV_USER}" | cut -d: -f6)"
 readonly DEV_HOME
-readonly COPILOT_VERSION="1.0.88"
+readonly COPILOT_VERSION="v1.0.88"
 readonly SKILLS_SOURCE="${2:?Copilot skills source path is required}"
 readonly INSTRUCTIONS_SOURCE="${3:?Copilot instructions source path is required}"
 readonly COPILOT_SETTINGS_SOURCE="${4:?Copilot settings source path is required}"

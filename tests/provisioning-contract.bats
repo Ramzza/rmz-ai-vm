@@ -7,10 +7,14 @@ setup() {
   MOCK_BIN="${TEST_DIRECTORY}/bin"
   TEST_DEV_HOME="${TEST_DIRECTORY}/home"
   TEST_DEV_USER="developer"
+  TEST_REAL_RM="$(command -v rm)"
+  TEST_CURL_LOG="${TEST_DIRECTORY}/curl.log"
+  TEST_VERSION_LOG="${TEST_DIRECTORY}/installer-version"
   TEST_NPM_LOG="${TEST_DIRECTORY}/npm.log"
   TEST_RUNUSER_LOG="${TEST_DIRECTORY}/runuser.log"
   mkdir -p "${MOCK_BIN}" "${TEST_DEV_HOME}/.copilot"
-  export TEST_DEV_HOME TEST_DEV_USER TEST_NPM_LOG TEST_RUNUSER_LOG
+  export TEST_DEV_HOME TEST_DEV_USER TEST_REAL_RM TEST_CURL_LOG TEST_VERSION_LOG \
+    TEST_NPM_LOG TEST_RUNUSER_LOG
   export PATH="${MOCK_BIN}:${PATH}"
 
   for command in apt-get git node code chown direnv; do
@@ -48,6 +52,24 @@ fi
 exec "$@"
 EOF
 
+  cat >"${MOCK_BIN}/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$@" >"${TEST_CURL_LOG:?}"
+cat <<'INSTALLER'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${VERSION:?}" >"${TEST_VERSION_LOG:?}"
+mkdir -p "${HOME:?}/.local/bin"
+cat >"${HOME}/.local/bin/copilot" <<CLI
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' 'Copilot CLI ${VERSION#v}'
+CLI
+chmod +x "${HOME}/.local/bin/copilot"
+INSTALLER
+EOF
+
   cat >"${MOCK_BIN}/npm" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -64,13 +86,14 @@ for path in "$@"; do
     /var/lib/apt/lists/*) exit 0 ;;
   esac
 done
-exec /usr/bin/rm "$@"
+exec "${TEST_REAL_RM}" "$@"
 EOF
 
   chmod +x \
     "${MOCK_BIN}/getent" \
     "${MOCK_BIN}/install" \
     "${MOCK_BIN}/runuser" \
+    "${MOCK_BIN}/curl" \
     "${MOCK_BIN}/npm" \
     "${MOCK_BIN}/rm"
   printf '{"theme":"dim","tabs":{"sort":["issues"],"hide":["issues"]}}\n' \
@@ -78,7 +101,7 @@ EOF
 }
 
 teardown() {
-  /usr/bin/rm -rf -- "${TEST_DIRECTORY}"
+  "${TEST_REAL_RM}" -rf -- "${TEST_DIRECTORY}"
 }
 
 @test "PRD-003: provisions the selected user with pinned CLI and repository Copilot assets" {
@@ -104,9 +127,15 @@ teardown() {
   [ "$(readlink "${TEST_DEV_HOME}/.copilot/copilot-instructions.md")" = \
     "${REPO_ROOT}/.github/copilot-instructions.md" ]
 
-  run grep -E -q -- '@github/copilot@[0-9]+\.[0-9]+\.[0-9]+' "${TEST_NPM_LOG}"
+  [ ! -e "${TEST_NPM_LOG}" ]
+  run diff -u - "${TEST_CURL_LOG}" <<'EOF'
+-fsSL
+https://gh.io/copilot-install
+EOF
   [ "${status}" -eq 0 ]
-  run grep -F -q -- "-u ${TEST_DEV_USER} -- npm install" "${TEST_RUNUSER_LOG}"
+  [ "$(cat "${TEST_VERSION_LOG}")" = "v1.0.88" ]
+  run grep -F -q -- "-u ${TEST_DEV_USER} -- env HOME=${TEST_DEV_HOME} VERSION=v1.0.88" \
+    "${TEST_RUNUSER_LOG}"
   [ "${status}" -eq 0 ]
   run jq -e '
     .theme == "dim"

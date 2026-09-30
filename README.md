@@ -167,8 +167,8 @@ After adding a skill or the instructions file while the VM is running, run `vagr
 
 The provisioner installs Git, Git LFS, GitHub CLI, Node.js 22, the pinned official Copilot CLI version `1.0.88`, Microsoft Visual Studio Code, Python 3 with virtual-environment support, ripgrep, fd, jq, direnv, tmux, zsh, build tools, ShellCheck, and Bats.
 
-The Copilot CLI is installed for the `vagrant` user under `~/.local/bin`; the provisioner adds that directory to `PATH`. The `copilot-auto` alias starts Copilot CLI; Autopilot itself is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
+The Copilot CLI is installed for the `vagrant` user under `~/.local/bin` by GitHub's [official Linux install script](https://gh.io/copilot-install); the provisioner adds that directory to `PATH`. It pins the release using the install script's `VERSION` setting and reconciles it on every provisioning run. Autopilot is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
 
-Node.js is installed from the explicit, signed NodeSource APT repository configuration rather than by executing a remote setup script. To update the Copilot CLI version, change `COPILOT_VERSION` in `provision/bootstrap.sh` and recreate or reprovision the VM. Reprovisioning always reconciles the pinned package, repairing incomplete platform dependencies even when the `copilot` launcher already exists.
+Node.js is installed from the explicit, signed NodeSource APT repository configuration for Node.js project development; it is not used to install Copilot CLI. To update the Copilot CLI version, change `COPILOT_VERSION` in `provision/bootstrap.sh` to a GitHub release tag and recreate or reprovision the VM.
 
 The default VM is headless (`vb.gui = false`), so the graphical VS Code application is installed but is not displayed inside the VM unless you add a graphical desktop and display support. For a typical workflow, use VS Code on the host with the `/workspace` folder, or connect using VS Code Remote - SSH.

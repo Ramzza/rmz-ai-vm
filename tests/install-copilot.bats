@@ -6,7 +6,9 @@ setup() {
   BOOTSTRAP="${REPO_ROOT}/provision/bootstrap.sh"
   TEST_DIRECTORY="$(mktemp -d)"
   MOCK_BIN="${TEST_DIRECTORY}/bin"
-  INSTALL_LOG="${TEST_DIRECTORY}/npm-arguments"
+  INSTALL_LOG="${TEST_DIRECTORY}/installer-arguments"
+  NPM_LOG="${TEST_DIRECTORY}/npm-arguments"
+  VERSION_LOG="${TEST_DIRECTORY}/installer-version"
   TEST_HOME="${TEST_DIRECTORY}/home"
   mkdir -p "${MOCK_BIN}"
 
@@ -26,19 +28,34 @@ EOF
 #!/bin/bash
 set -euo pipefail
 
-printf '%s\n' "$@" >"${INSTALL_LOG:?}"
-if [[ -n "${MOCK_COPILOT_HOME:-}" ]]; then
-  mkdir -p "${MOCK_COPILOT_HOME}/.local/bin"
-  cat >"${MOCK_COPILOT_HOME}/.local/bin/copilot" <<'CLI'
-#!/bin/bash
-set -euo pipefail
-[ "${1:-}" = "--version" ]
-printf '%s\n' 'Copilot CLI 1.0.88'
-CLI
-  chmod +x "${MOCK_COPILOT_HOME}/.local/bin/copilot"
-fi
+printf '%s\n' "$@" >"${NPM_LOG:?}"
 EOF
   chmod +x "${MOCK_BIN}/npm"
+
+  cat >"${MOCK_BIN}/curl" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+printf '%s\n' "$@" >"${INSTALL_LOG:?}"
+if [[ "${MOCK_CURL_FAIL:-0}" = 1 ]]; then
+  exit 22
+fi
+
+cat <<'INSTALLER'
+#!/bin/bash
+set -euo pipefail
+printf '%s\n' "${VERSION:?}" >"${VERSION_LOG:?}"
+mkdir -p -- "${HOME:?}/.local/bin"
+cat >"${HOME}/.local/bin/copilot" <<CLI
+#!/bin/bash
+set -euo pipefail
+[ "\${1:-}" = "--version" ]
+printf '%s\n' 'Copilot CLI ${VERSION#v}'
+CLI
+chmod +x "${HOME}/.local/bin/copilot"
+INSTALLER
+EOF
+  chmod +x "${MOCK_BIN}/curl"
 
   cat >"${MOCK_BIN}/getent" <<'EOF'
 #!/bin/bash
@@ -92,21 +109,39 @@ teardown() {
   rm -rf -- "${TEST_DIRECTORY}"
 }
 
-@test "PRD-003: reconciles the pinned Copilot package" {
+@test "PRD-003: installs the pinned CLI with GitHub's official Linux installer" {
   run env \
     PATH="${MOCK_BIN}:${PATH}" \
     INSTALL_LOG="${INSTALL_LOG}" \
-    bash "${INSTALLER}" "vagrant" "/home/vagrant" "1.0.88"
+    NPM_LOG="${NPM_LOG}" \
+    VERSION_LOG="${VERSION_LOG}" \
+    bash "${INSTALLER}" "vagrant" "${TEST_HOME}" "v1.0.88"
 
   [ "${status}" -eq 0 ]
+  [ ! -e "${NPM_LOG}" ]
   run diff -u - "${INSTALL_LOG}" <<'EOF'
-install
---global
---prefix
-/home/vagrant/.local
-@github/copilot@1.0.88
+-fsSL
+https://gh.io/copilot-install
 EOF
   [ "${status}" -eq 0 ]
+  [ "$(cat "${VERSION_LOG}")" = "v1.0.88" ]
+  [ -x "${TEST_HOME}/.local/bin/copilot" ]
+  run "${TEST_HOME}/.local/bin/copilot" --version
+  [ "${status}" -eq 0 ]
+  [ "${output}" = "Copilot CLI 1.0.88" ]
+}
+
+@test "PRD-003: propagates official installer download failures" {
+  run env \
+    PATH="${MOCK_BIN}:${PATH}" \
+    INSTALL_LOG="${INSTALL_LOG}" \
+    NPM_LOG="${NPM_LOG}" \
+    VERSION_LOG="${VERSION_LOG}" \
+    MOCK_CURL_FAIL=1 \
+    bash "${INSTALLER}" "vagrant" "${TEST_HOME}" "v1.0.88"
+
+  [ "${status}" -ne 0 ]
+  [ ! -e "${NPM_LOG}" ]
 }
 
 @test "PRD-002: defaults the VM memory to 8 GiB" {
@@ -129,7 +164,8 @@ EOF
     "PATH=${MOCK_BIN}:${PATH}" \
     "TEST_HOME=${TEST_HOME}" \
     "INSTALL_LOG=${INSTALL_LOG}" \
-    "MOCK_COPILOT_HOME=${TEST_HOME}" \
+    "NPM_LOG=${NPM_LOG}" \
+    "VERSION_LOG=${VERSION_LOG}" \
     /bin/bash "${PROVISIONER_SCRIPT}" \
     "vagrant" \
     "${REPO_ROOT}/.github/skills" \
@@ -137,16 +173,14 @@ EOF
     "${REPO_ROOT}/provision/copilot-settings.json" \
     "${REPO_ROOT}/provision/configure-copilot-settings.sh" \
     "${INSTALLER}"
-
   [ "${status}" -eq 0 ]
+  [ ! -e "${NPM_LOG}" ]
   run diff -u - "${INSTALL_LOG}" <<EOF
-install
---global
---prefix
-${TEST_HOME}/.local
-@github/copilot@1.0.88
+-fsSL
+https://gh.io/copilot-install
 EOF
   [ "${status}" -eq 0 ]
+  [ "$(cat "${VERSION_LOG}")" = "v1.0.88" ]
 
   run "${TEST_HOME}/.local/bin/copilot" --version
   [ "${status}" -eq 0 ]
