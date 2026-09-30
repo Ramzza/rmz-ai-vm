@@ -21,7 +21,7 @@ setup() {
   VM_NAME="copilot-smoke-$$"
   mkdir -p "${PROJECT_DIRECTORY}"
   cp "${REPO_ROOT}/Vagrantfile" "${PROJECT_DIRECTORY}/Vagrantfile"
-  cp -R "${REPO_ROOT}/.github" "${PROJECT_DIRECTORY}/.github"
+  cp "${REPO_ROOT}/vm-config.json" "${PROJECT_DIRECTORY}/vm-config.json"
   cp -R "${REPO_ROOT}/provision" "${PROJECT_DIRECTORY}/provision"
 }
 
@@ -50,21 +50,21 @@ vagrant_in_project() {
   )
 }
 
-@test "Vagrant provisions a runnable Copilot CLI with managed settings" {
+@test "PRD-003: Vagrant provisions and runs the official Copilot CLI" {
   run vagrant_in_project up --provider virtualbox
   [ "${status}" -eq 0 ]
 
   smoke_command="$(cat <<'EOF'
 set -eu
-version="$("$HOME/.local/bin/copilot" --version)"
-test -n "$version"
-printf '%s\n' "$version"
-jq -e --slurpfile expected \
-  /workspace/rmz-ai-vm/provision/copilot-settings.json \
-  '.model == $expected[0].model
-   and .effortLevel == $expected[0].effortLevel
-   and .tabs.hide == $expected[0].tabs.hide' \
-  "$HOME/.copilot/settings.json" >/dev/null
+  copilot_path="$(command -v copilot)"
+  test "$copilot_path" = /usr/local/bin/copilot
+  version="$(copilot --version)"
+  test -n "$version"
+  printf '%s\n' "$copilot_path"
+  printf '%s\n' "$version"
+test ! -e "$HOME/.copilot/settings.json"
+test ! -e "$HOME/.copilot/copilot-instructions.md"
+test ! -e "$HOME/.copilot/skills"
 EOF
 )"
 

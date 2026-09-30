@@ -2,7 +2,7 @@
 
 ## Outcome
 
-Provide a reproducible Ubuntu development VM for GitHub Copilot CLI while keeping project files and shared Copilot configuration on the host.
+Provide a reproducible Ubuntu development VM with GitHub Copilot CLI while keeping project files on the host and user Copilot configuration untouched.
 
 ## Requirements
 
@@ -10,10 +10,10 @@ Provide a reproducible Ubuntu development VM for GitHub Copilot CLI while keepin
   **Verification:** `tests/vagrantfile-contract.bats::PRD-001`.
 - **PRD-002 - Editable VM resources:** Root-level `vm-config.json` lists the optional VirtualBox name, CPU count, and memory in MB; a `null` name lets Vagrant generate a unique machine name by default. Resource defaults are 4 CPUs and 8192 MB. `VM_NAME`, `VM_CPUS`, and `VM_MEMORY_MB` override their respective settings.
   **Verification:** `tests/vagrantfile-contract.bats` tests prefixed `PRD-002`.
-- **PRD-003 - Repository-managed Copilot setup:** Provisioning uses `VM_USER` (default `vagrant`), installs the pinned Copilot CLI release with GitHub's official Linux install script on every run, and connects that account to the repository's skills and instructions.
-  **Verification:** `tests/vagrantfile-contract.bats::PRD-003`; `tests/provisioning-contract.bats::PRD-003`; `tests/install-copilot.bats::PRD-003` tests official script arguments, pinned version, download failure handling, and bootstrap provisioning; `tests/vagrant-smoke.bats`.
-- **PRD-004 - Safe managed preferences:** Managed Copilot settings enforce the configured model, effort, and hidden tabs; they are validated and applied idempotently, preserve unrelated user preferences, and fail without corrupting existing settings when managed input is invalid or missing.
-  **Verification:** `tests/configure-copilot-settings.bats` tests prefixed `PRD-004`.
+- **PRD-003 - Official Copilot installation:** Provisioning installs the latest stable Copilot CLI with GitHub's official Linux installer, without npm, and makes `copilot` available system-wide.
+  **Verification:** `tests/vagrantfile-contract.bats::PRD-003`; `tests/provisioning-contract.bats::PRD-003` verifies the official installer URL, default stable-version behavior, and absence of npm/Node.js; `tests/vagrant-smoke.bats` verifies the CLI path and version in Ubuntu.
+- **PRD-004 - Unmodified Copilot profile:** Provisioning does not create, change, or add repository-managed settings, skills, or instructions to the VM user's `~/.copilot` directory.
+  **Verification:** `tests/provisioning-contract.bats::PRD-004` checks that existing user settings remain unchanged and no global assets are linked.
 - **PRD-005 - Host-side Copilot launcher:** A host command starts Vagrant from this repository on the host, runs `vagrant up` before `vagrant ssh`, and can be installed for Bash/Zsh on Linux or PowerShell on Windows. The Windows launcher does not treat the interactive guest shell's exit status as an SSH launch failure.
   **Verification:** `tests/rmz-copilot.bats` tests prefixed `PRD-005`; `tests/rmz-copilot-windows.ps1` in the Windows CI job verifies nonzero guest shell exit statuses.
 - **PRD-006 - Workspace-first SSH sessions:** An interactive `vagrant ssh` session starts in `/workspace`, the mounted host projects directory.

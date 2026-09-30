@@ -20,13 +20,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install test tools
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends --yes bats jq
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends --yes bats
 
       - name: Build
         run: |
-          bash -n provision/bootstrap.sh provision/configure-copilot-settings.sh provision/install-copilot.sh scripts/rmz-copilot.sh scripts/setup-rmz-copilot.sh tests/shell-line-endings.sh
+          bash -n provision/bootstrap.sh scripts/rmz-copilot.sh scripts/setup-rmz-copilot.sh tests/shell-line-endings.sh
           ruby -c Vagrantfile
-          jq empty provision/copilot-settings.json
 
       - name: Test
         run: |

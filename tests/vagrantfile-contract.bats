@@ -133,12 +133,7 @@ RUBY
   [ "${output}" = "override-dev|2|4096" ]
 }
 
-@test "PRD-003: passes the selected user and repository assets to bootstrap" {
-  assert_contains 'ENV.fetch("VM_USER", "vagrant")'
+@test "PRD-003: passes only the selected user to bootstrap" {
   assert_contains 'path: "provision/bootstrap.sh"'
-  assert_contains 'File.join("/workspace", File.basename(__dir__), ".github", "skills")'
-  assert_contains 'File.join("/workspace", File.basename(__dir__), ".github", "copilot-instructions.md")'
-  assert_contains 'File.join("/workspace", File.basename(__dir__), "provision", "copilot-settings.json")'
-  assert_contains 'File.join("/workspace", File.basename(__dir__), "provision", "configure-copilot-settings.sh")'
-  assert_contains 'File.join("/workspace", File.basename(__dir__), "provision", "install-copilot.sh")'
+  assert_contains 'args: [ENV.fetch("VM_USER", "vagrant")]'
 }
