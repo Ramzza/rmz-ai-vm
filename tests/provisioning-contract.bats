@@ -7,20 +7,29 @@ setup() {
   MOCK_BIN="${TEST_DIRECTORY}/bin"
   TEST_DEV_HOME="${TEST_DIRECTORY}/home"
   TEST_DEV_USER="developer"
+  TEST_REAL_RM="$(command -v rm)"
+  TEST_INSTALL_PREFIX="${TEST_DIRECTORY}/usr-local"
+  TEST_CURL_LOG="${TEST_DIRECTORY}/curl.log"
+  TEST_VERSION_LOG="${TEST_DIRECTORY}/installer-version"
   TEST_NPM_LOG="${TEST_DIRECTORY}/npm.log"
   TEST_RUNUSER_LOG="${TEST_DIRECTORY}/runuser.log"
-  mkdir -p "${MOCK_BIN}" "${TEST_DEV_HOME}/.copilot"
-  export TEST_DEV_HOME TEST_DEV_USER TEST_NPM_LOG TEST_RUNUSER_LOG
-  export PATH="${MOCK_BIN}:${PATH}"
+  TEST_APT_LOG="${TEST_DIRECTORY}/apt-get.log"
+  TEST_COPILOT_INIT_SOURCE="${TEST_DIRECTORY}/copilot-init.sh"
+  TEST_INIT_LOG="${TEST_DIRECTORY}/copilot-init.log"
+  mkdir -p "${MOCK_BIN}" "${TEST_DEV_HOME}"
+  export TEST_DEV_HOME TEST_DEV_USER TEST_REAL_RM TEST_INSTALL_PREFIX \
+    TEST_CURL_LOG TEST_VERSION_LOG TEST_NPM_LOG TEST_RUNUSER_LOG TEST_APT_LOG \
+    TEST_INIT_LOG
+  export PATH="${MOCK_BIN}:${TEST_INSTALL_PREFIX}/bin:${PATH}"
 
-  for command in apt-get git node code chown direnv; do
+  for command in git node code chown direnv; do
     printf '%s\n' '#!/usr/bin/env bash' 'exit 0' >"${MOCK_BIN}/${command}"
     chmod +x "${MOCK_BIN}/${command}"
   done
 
-  cat >"${MOCK_BIN}/getent" <<'EOF'
+  cat >"${MOCK_BIN}/apt-get" <<'EOF'
 #!/usr/bin/env bash
-printf '%s:x:1000:1000::%s:/bin/bash\n' "${TEST_DEV_USER}" "${TEST_DEV_HOME}"
+printf '%s\n' "$*" >>"${TEST_APT_LOG:?}"
 EOF
 
   cat >"${MOCK_BIN}/install" <<'EOF'
@@ -33,6 +42,11 @@ while [ "$#" -gt 0 ]; do
     *) mkdir -p -- "$1"; shift ;;
   esac
 done
+EOF
+
+  cat >"${MOCK_BIN}/getent" <<'EOF'
+#!/usr/bin/env bash
+printf '%s:x:1000:1000::%s:/bin/bash\n' "${TEST_DEV_USER}" "${TEST_DEV_HOME}"
 EOF
 
   cat >"${MOCK_BIN}/runuser" <<'EOF'
@@ -48,13 +62,35 @@ fi
 exec "$@"
 EOF
 
+  cat >"${MOCK_BIN}/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$@" >"${TEST_CURL_LOG:?}"
+cat <<'INSTALLER'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${VERSION-unset}" "${PREFIX-unset}" >"${TEST_VERSION_LOG:?}"
+mkdir -p "${TEST_INSTALL_PREFIX:?}/bin"
+cat >"${TEST_INSTALL_PREFIX}/bin/copilot" <<'CLI'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' 'GitHub Copilot CLI test binary'
+CLI
+chmod +x "${TEST_INSTALL_PREFIX}/bin/copilot"
+INSTALLER
+EOF
+
+  cat >"${TEST_COPILOT_INIT_SOURCE}" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+: >"${TEST_INIT_LOG:?}"
+EOF
+  chmod +x "${TEST_COPILOT_INIT_SOURCE}"
+
   cat >"${MOCK_BIN}/npm" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$*" >>"${TEST_NPM_LOG}"
-mkdir -p "${TEST_DEV_HOME}/.local/bin"
-printf '%s\n' '#!/usr/bin/env bash' 'exit 0' >"${TEST_DEV_HOME}/.local/bin/copilot"
-chmod +x "${TEST_DEV_HOME}/.local/bin/copilot"
 EOF
 
   cat >"${MOCK_BIN}/rm" <<'EOF'
@@ -64,68 +100,133 @@ for path in "$@"; do
     /var/lib/apt/lists/*) exit 0 ;;
   esac
 done
-exec /usr/bin/rm "$@"
+exec "${TEST_REAL_RM}" "$@"
 EOF
 
   chmod +x \
     "${MOCK_BIN}/getent" \
     "${MOCK_BIN}/install" \
+    "${MOCK_BIN}/apt-get" \
     "${MOCK_BIN}/runuser" \
+    "${MOCK_BIN}/curl" \
     "${MOCK_BIN}/npm" \
     "${MOCK_BIN}/rm"
-  printf '{"theme":"dim","tabs":{"sort":["issues"],"hide":["issues"]}}\n' \
-    >"${TEST_DEV_HOME}/.copilot/settings.json"
 }
 
 teardown() {
-  /usr/bin/rm -rf -- "${TEST_DIRECTORY}"
+  "${TEST_REAL_RM}" -rf -- "${TEST_DIRECTORY}"
 }
 
-@test "PRD-003: provisions the selected user with pinned CLI and repository Copilot assets" {
-  run bash "${BOOTSTRAP_SCRIPT}" \
+run_bootstrap() {
+  env -u PREFIX -u VERSION bash "${BOOTSTRAP_SCRIPT}" \
     "${TEST_DEV_USER}" \
-    "${REPO_ROOT}/.github/skills" \
-    "${REPO_ROOT}/.github/copilot-instructions.md" \
-    "${REPO_ROOT}/provision/copilot-settings.json" \
-    "${REPO_ROOT}/provision/configure-copilot-settings.sh" \
-    "${REPO_ROOT}/provision/install-copilot.sh"
+    "${TEST_COPILOT_INIT_SOURCE}"
+}
+
+@test "PRD-003: installs Copilot from GitHub's official Linux installer without npm" {
+  run run_bootstrap
 
   [ "${status}" -eq 0 ]
-  [ -x "${TEST_DEV_HOME}/.local/bin/copilot" ]
-  for skill_path in "${REPO_ROOT}/.github/skills"/*/; do
-    [ -f "${skill_path}SKILL.md" ] || continue
-    skill_name="${skill_path%/}"
-    skill_name="${skill_name##*/}"
-    skill_target="${TEST_DEV_HOME}/.copilot/skills/${skill_name}"
-    [ -L "${skill_target}" ]
-    [ "$(readlink -f "${skill_target}")" = "$(readlink -f "${skill_path}")" ]
-  done
-  [ -L "${TEST_DEV_HOME}/.copilot/copilot-instructions.md" ]
-  [ "$(readlink "${TEST_DEV_HOME}/.copilot/copilot-instructions.md")" = \
-    "${REPO_ROOT}/.github/copilot-instructions.md" ]
+  [ -x "${TEST_INSTALL_PREFIX}/bin/copilot" ]
+  run copilot --version
+  [ "${status}" -eq 0 ]
+  [ "${output}" = "GitHub Copilot CLI test binary" ]
+  [ ! -e "${TEST_NPM_LOG}" ]
+  [ ! -e "${TEST_RUNUSER_LOG}" ]
+  run diff -u - "${TEST_CURL_LOG}" <<'EOF'
+-fsSL
+https://gh.io/copilot-install
+EOF
+  [ "${status}" -eq 0 ]
+  run diff -u - "${TEST_VERSION_LOG}" <<'EOF'
+unset
+unset
+EOF
+  [ "${status}" -eq 0 ]
+  run grep -E -q 'npm|nodejs|NodeSource' "${BOOTSTRAP_SCRIPT}"
+  [ "${status}" -ne 0 ]
+}
 
-  run grep -E -q -- '@github/copilot@[0-9]+\.[0-9]+\.[0-9]+' "${TEST_NPM_LOG}"
+@test "PRD-004: exposes a manual copilot-init command" {
+  run run_bootstrap
+
   [ "${status}" -eq 0 ]
-  run grep -F -q -- "-u ${TEST_DEV_USER} -- npm install" "${TEST_RUNUSER_LOG}"
+  run grep -E -q '(^|[[:space:]])jq([[:space:]]|$)' "${TEST_APT_LOG}"
   [ "${status}" -eq 0 ]
-  run jq -e '
-    .theme == "dim"
-    and .model == "gpt-6-luna"
-    and .effortLevel == "max"
-    and .tabs.sort == ["issues"]
-    and .tabs.hide == ["issues", "gists"]
-  ' "${TEST_DEV_HOME}/.copilot/settings.json"
+  [ -f "${TEST_INSTALL_PREFIX}/bin/copilot-init" ]
+  [ -x "${TEST_INSTALL_PREFIX}/bin/copilot-init" ]
+  run grep -F -q -- "${TEST_COPILOT_INIT_SOURCE}" \
+    "${TEST_INSTALL_PREFIX}/bin/copilot-init"
   [ "${status}" -eq 0 ]
+  [ ! -e "${TEST_INIT_LOG}" ]
+  [ ! -e "${TEST_DEV_HOME}/.copilot" ]
+  [ ! -e "${TEST_DEV_HOME}/.copilot/copilot-instructions.md" ]
+  [ ! -e "${TEST_DEV_HOME}/.copilot/skills" ]
+
+  run run_bootstrap
+
+  [ "${status}" -eq 0 ]
+  [ ! -e "${TEST_INIT_LOG}" ]
+
+  run "${TEST_INSTALL_PREFIX}/bin/copilot-init"
+
+  [ "${status}" -eq 0 ]
+  [ -e "${TEST_INIT_LOG}" ]
+}
+
+@test "PRD-004: provisioning leaves the user's Copilot profile untouched" {
+  mkdir -p "${TEST_DEV_HOME}/.copilot"
+  printf '{"theme":"dim","tabs":{"sort":["issues"],"hide":["issues"]}}\n' \
+    >"${TEST_DEV_HOME}/.copilot/settings.json"
+  cp "${TEST_DEV_HOME}/.copilot/settings.json" "${TEST_DIRECTORY}/settings-before.json"
+
+  run run_bootstrap
+
+  [ "${status}" -eq 0 ]
+  run cmp "${TEST_DIRECTORY}/settings-before.json" \
+    "${TEST_DEV_HOME}/.copilot/settings.json"
+  [ "${status}" -eq 0 ]
+  [ ! -e "${TEST_DEV_HOME}/.copilot/copilot-instructions.md" ]
+  [ ! -e "${TEST_DEV_HOME}/.copilot/skills" ]
+  [ ! -e "${TEST_INIT_LOG}" ]
+}
+
+@test "PRD-004: preserves user-owned instruction and skill targets" {
+  mkdir -p "${TEST_DEV_HOME}/.copilot/skills/rmz-test"
+  printf '%s\n' 'User instructions' \
+    >"${TEST_DEV_HOME}/.copilot/copilot-instructions.md"
+  printf '%s\n' 'User-owned skill' \
+    >"${TEST_DEV_HOME}/.copilot/skills/rmz-test/SKILL.md"
+  cp "${TEST_DEV_HOME}/.copilot/copilot-instructions.md" \
+    "${TEST_DIRECTORY}/user-instructions-before.md"
+  cp "${TEST_DEV_HOME}/.copilot/skills/rmz-test/SKILL.md" \
+    "${TEST_DIRECTORY}/user-skill-before.md"
+
+  run run_bootstrap
+
+  [ "${status}" -eq 0 ]
+  [ ! -L "${TEST_DEV_HOME}/.copilot/copilot-instructions.md" ]
+  [ ! -L "${TEST_DEV_HOME}/.copilot/skills/rmz-test" ]
+  run cmp "${TEST_DIRECTORY}/user-instructions-before.md" \
+    "${TEST_DEV_HOME}/.copilot/copilot-instructions.md"
+  [ "${status}" -eq 0 ]
+  run cmp "${TEST_DIRECTORY}/user-skill-before.md" \
+    "${TEST_DEV_HOME}/.copilot/skills/rmz-test/SKILL.md"
+  [ "${status}" -eq 0 ]
+}
+
+@test "PRD-004: reports a missing manual initialization script" {
+  run env -u PREFIX -u VERSION bash "${BOOTSTRAP_SCRIPT}" \
+    "${TEST_DEV_USER}" \
+    "${TEST_DIRECTORY}/missing-copilot-init.sh"
+
+  [ "${status}" -ne 0 ]
+  [[ "${output}" == *"Copilot init script not found"* ]]
+  [ ! -e "${TEST_DEV_HOME}/.copilot" ]
 }
 
 @test "PRD-006: starts Bash sessions in the mounted workspace" {
-  run bash "${BOOTSTRAP_SCRIPT}" \
-    "${TEST_DEV_USER}" \
-    "${REPO_ROOT}/.github/skills" \
-    "${REPO_ROOT}/.github/copilot-instructions.md" \
-    "${REPO_ROOT}/provision/copilot-settings.json" \
-    "${REPO_ROOT}/provision/configure-copilot-settings.sh" \
-    "${REPO_ROOT}/provision/install-copilot.sh"
+  run run_bootstrap
   [ "${status}" -eq 0 ]
 
   TEST_WORKSPACE="${TEST_DIRECTORY}/workspace"

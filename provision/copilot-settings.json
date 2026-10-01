@@ -5,5 +5,19 @@
     "hide": [
       "gists"
     ]
+  },
+  "footer": {
+    "showModelEffort": true,
+    "showDirectory": true,
+    "showBranch": true,
+    "showContextWindow": true,
+    "showQuota": true,
+    "showAgent": true,
+    "showAiUsed": true,
+    "showCodeChanges": true,
+    "showUsername": true,
+    "showSandbox": true,
+    "showYolo": true,
+    "showCustom": true
   }
 }

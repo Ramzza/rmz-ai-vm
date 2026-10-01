@@ -4,6 +4,7 @@ require "json"
 
 vm_settings = JSON.parse(File.read(File.join(__dir__, "vm-config.json")))
 vm_name = ENV.fetch("VM_NAME", vm_settings.fetch("name"))
+workspace_repository = File.join("/workspace", File.basename(__dir__))
 
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/jammy64"
@@ -26,10 +27,6 @@ Vagrant.configure("2") do |config|
     path: "provision/bootstrap.sh",
     args: [
       ENV.fetch("VM_USER", "vagrant"),
-      File.join("/workspace", File.basename(__dir__), ".github", "skills"),
-      File.join("/workspace", File.basename(__dir__), ".github", "copilot-instructions.md"),
-      File.join("/workspace", File.basename(__dir__), "provision", "copilot-settings.json"),
-      File.join("/workspace", File.basename(__dir__), "provision", "configure-copilot-settings.sh"),
-      File.join("/workspace", File.basename(__dir__), "provision", "install-copilot.sh")
+      File.join(workspace_repository, "provision", "copilot-init.sh")
     ]
 end

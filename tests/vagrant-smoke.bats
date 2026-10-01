@@ -21,8 +21,12 @@ setup() {
   VM_NAME="copilot-smoke-$$"
   mkdir -p "${PROJECT_DIRECTORY}"
   cp "${REPO_ROOT}/Vagrantfile" "${PROJECT_DIRECTORY}/Vagrantfile"
-  cp -R "${REPO_ROOT}/.github" "${PROJECT_DIRECTORY}/.github"
+  cp "${REPO_ROOT}/vm-config.json" "${PROJECT_DIRECTORY}/vm-config.json"
   cp -R "${REPO_ROOT}/provision" "${PROJECT_DIRECTORY}/provision"
+  mkdir -p "${PROJECT_DIRECTORY}/.github"
+  cp "${REPO_ROOT}/.github/copilot-instructions.md" \
+    "${PROJECT_DIRECTORY}/.github/copilot-instructions.md"
+  cp -R "${REPO_ROOT}/.github/skills" "${PROJECT_DIRECTORY}/.github/skills"
 }
 
 teardown() {
@@ -50,25 +54,120 @@ vagrant_in_project() {
   )
 }
 
-@test "Vagrant provisions a runnable Copilot CLI with managed settings" {
+@test "PRD-003: Vagrant installs Copilot before optional manual initialization" {
   run vagrant_in_project up --provider virtualbox
   [ "${status}" -eq 0 ]
 
   smoke_command="$(cat <<'EOF'
 set -eu
-version="$("$HOME/.local/bin/copilot" --version)"
+copilot_path="$(command -v copilot)"
+test "$copilot_path" = /usr/local/bin/copilot
+test ! -e "$HOME/.copilot"
+version="$(copilot --version)"
 test -n "$version"
+printf '%s\n' "$copilot_path"
 printf '%s\n' "$version"
-jq -e --slurpfile expected \
-  /workspace/rmz-ai-vm/provision/copilot-settings.json \
-  '.model == $expected[0].model
-   and .effortLevel == $expected[0].effortLevel
-   and .tabs.hide == $expected[0].tabs.hide' \
-  "$HOME/.copilot/settings.json" >/dev/null
+test "$(command -v copilot-init)" = /usr/local/bin/copilot-init
+test ! -e "$HOME/.copilot/copilot-instructions.md"
+test ! -e "$HOME/.copilot/skills"
+python3 - <<'PY'
+import errno
+import fcntl
+import os
+import pty
+import select
+import signal
+import struct
+import sys
+import termios
+import time
+
+os.environ["TERM"] = "xterm-256color"
+pid, terminal = pty.fork()
+if pid == 0:
+    os.execvp("copilot", ["copilot"])
+
+fcntl.ioctl(terminal, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
+deadline = time.monotonic() + 5
+output = bytearray()
+while time.monotonic() < deadline:
+    ended, status = os.waitpid(pid, os.WNOHANG)
+    if ended:
+        sys.stderr.write(
+            f"Copilot exited before interactive startup (status {status}).\n"
+        )
+        sys.exit(1)
+    readable, _, _ = select.select([terminal], [], [], 0.1)
+    if readable:
+        try:
+            output.extend(os.read(terminal, 4096))
+        except OSError as error:
+            if error.errno != errno.EIO:
+                raise
+
+if not output:
+    os.killpg(pid, signal.SIGTERM)
+    os.waitpid(pid, 0)
+    sys.exit("Copilot produced no interactive terminal output.")
+
+os.write(terminal, b"\x03")
+deadline = time.monotonic() + 2
+while time.monotonic() < deadline:
+    ended, _ = os.waitpid(pid, os.WNOHANG)
+    if ended:
+        break
+    time.sleep(0.05)
+else:
+    os.killpg(pid, signal.SIGTERM)
+    os.waitpid(pid, 0)
+
+os.close(terminal)
+print("Copilot opened an interactive pseudo-terminal.")
+PY
 EOF
 )"
 
   run vagrant_in_project ssh -c "${smoke_command}"
+  [ "${status}" -eq 0 ]
+  [ -n "${output}" ]
+
+  init_command="$(cat <<'EOF'
+set -eu
+copilot-init
+test -L "$HOME/.copilot/copilot-instructions.md"
+test "$(readlink -f "$HOME/.copilot/copilot-instructions.md")" = \
+  "/workspace/rmz-ai-vm/.github/copilot-instructions.md"
+test -L "$HOME/.copilot/skills/rmz-test"
+test "$(readlink -f "$HOME/.copilot/skills/rmz-test")" = \
+  "/workspace/rmz-ai-vm/.github/skills/rmz-test"
+test -f "$HOME/.copilot/skills/rmz-test/SKILL.md"
+copilot skill list | grep -F 'rmz-test'
+copilot --version
+jq -e '
+  .model == "gpt-6-luna"
+  and .effortLevel == "max"
+  and .tabs.hide == ["gists"]
+  and (
+    [
+      .footer.showModelEffort,
+      .footer.showDirectory,
+      .footer.showBranch,
+      .footer.showContextWindow,
+      .footer.showQuota,
+      .footer.showAgent,
+      .footer.showAiUsed,
+      .footer.showCodeChanges,
+      .footer.showUsername,
+      .footer.showSandbox,
+      .footer.showYolo,
+      .footer.showCustom
+    ] | all(.[]; . == true)
+  )
+' "$HOME/.copilot/settings.json"
+EOF
+)"
+
+  run vagrant_in_project ssh -c "${init_command}"
   [ "${status}" -eq 0 ]
   [ -n "${output}" ]
 }

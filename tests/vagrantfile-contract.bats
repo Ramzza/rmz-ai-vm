@@ -29,7 +29,7 @@ end
 
 class TestVM
   attr_accessor :box, :hostname, :boot_timeout
-  attr_reader :provider_settings
+  attr_reader :provider_settings, :provision_call
 
   def initialize
     @provider_settings = TestProviderSettings.new
@@ -45,6 +45,7 @@ class TestVM
   end
 
   def provision(*args, **options)
+    @provision_call = [args, options]
   end
 end
 
@@ -70,9 +71,14 @@ module Vagrant
 end
 
 load ARGV.fetch(0)
-settings = Vagrant.config.vm.provider_settings
-name = settings.name.nil? ? "auto" : settings.name
-puts [name, settings.cpus, settings.memory].join("|")
+if ENV["TEST_CAPTURE_PROVISION"] == "1"
+  provision_options = Vagrant.config.vm.provision_call.fetch(1)
+  puts [provision_options.fetch(:path), *provision_options.fetch(:args)].join("|")
+else
+  settings = Vagrant.config.vm.provider_settings
+  name = settings.name.nil? ? "auto" : settings.name
+  puts [name, settings.cpus, settings.memory].join("|")
+end
 RUBY
 }
 
@@ -133,12 +139,12 @@ RUBY
   [ "${output}" = "override-dev|2|4096" ]
 }
 
-@test "PRD-003: passes the selected user and repository assets to bootstrap" {
-  assert_contains 'ENV.fetch("VM_USER", "vagrant")'
-  assert_contains 'path: "provision/bootstrap.sh"'
-  assert_contains 'File.join("/workspace", File.basename(__dir__), ".github", "skills")'
-  assert_contains 'File.join("/workspace", File.basename(__dir__), ".github", "copilot-instructions.md")'
-  assert_contains 'File.join("/workspace", File.basename(__dir__), "provision", "copilot-settings.json")'
-  assert_contains 'File.join("/workspace", File.basename(__dir__), "provision", "configure-copilot-settings.sh")'
-  assert_contains 'File.join("/workspace", File.basename(__dir__), "provision", "install-copilot.sh")'
+@test "PRD-004: passes the manual initialization script to bootstrap" {
+  repo_name="${REPO_ROOT##*/}"
+  run evaluate_vagrantfile "${VAGRANTFILE}" \
+    -u VM_USER TEST_CAPTURE_PROVISION=1
+  [ "${status}" -eq 0 ]
+  expected_output="provision/bootstrap.sh|vagrant"
+  expected_output="${expected_output}|/workspace/${repo_name}/provision/copilot-init.sh"
+  [ "${output}" = "${expected_output}" ]
 }

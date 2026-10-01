@@ -3,14 +3,14 @@ name: rmz-create-skill
 description: Create a new reusable GitHub Copilot CLI skill in rmz-ai-vm; use when a requested skill does not already exist.
 ---
 
-# Create a VM-provisioned Copilot skill
+# Create a repository Copilot skill
 
 Use this skill only to create a new custom skill for the rmz-ai-vm environment. Before writing anything, check whether `.github/skills/<skill-name>/SKILL.md` already exists for the requested skill. If it exists, do not create or edit it; hand off to the `rmz-update-skill` skill. If it does not exist, create it here.
 
 ## Source of truth and location
 
-- Store every VM-wide skill in this repository at `.github/skills/<skill-name>/SKILL.md`.
-- Treat this repository as the source of truth. Do not create the only copy under `~/.copilot`, inside a project, or in another machine-local directory.
+- Store every repository skill at `.github/skills/<skill-name>/SKILL.md`.
+- Treat this repository as the source of truth. The guest user can run `copilot-init` to link repository skills into `~/.copilot/skills`; do not create or maintain a separate machine-local copy.
 - Use a concise, lowercase, kebab-case skill name beginning with `rmz-`; use it for both the directory and matching `name` frontmatter value.
 - Include YAML frontmatter with a `name` and a specific `description`. The description should say what the skill does and when Copilot should use it.
 - Add supporting scripts or references inside that skill's directory only when they materially help the skill perform its task. Keep instructions and resources versioned together.
@@ -23,8 +23,7 @@ Use this skill only to create a new custom skill for the rmz-ai-vm environment. 
 4. Keep the `SKILL.md` focused. Move substantial reference material into the skill directory and link to it from the skill instructions.
 5. Do not put secrets, machine-specific credentials, or generated state in the skill.
 
-## Provisioning and validation
+## Validation
 
-- The VM provisioner discovers skill directories under `.github/skills` and links them into the `vagrant` user's `~/.copilot/skills`. Preserve this layout so the skill is globally available in the VM and is backed by the mounted, version-controlled repository.
 - Check that the skill directory name matches its frontmatter `name`, that the YAML frontmatter parses, and that paths and commands in the instructions are accurate.
-- Update the VM README if the provisioning workflow or skill storage convention changes.
+- `copilot-init` links each repository skill into `~/.copilot/skills/<skill-name>` without overwriting an existing user-owned target.

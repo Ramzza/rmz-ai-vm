@@ -4,7 +4,8 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly REPO_ROOT
 readonly LF_ENFORCED_FILES=(
-  "provision/configure-copilot-settings.sh"
+  "provision/bootstrap.sh"
+  "provision/copilot-init.sh"
   "scripts/rmz-copilot.sh"
   "scripts/setup-rmz-copilot.sh"
   "tests/rmz-copilot.bats"

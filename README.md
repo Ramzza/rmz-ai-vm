@@ -84,12 +84,13 @@ From this directory:
 ```sh
 vagrant up
 vagrant ssh
+copilot-init # optional: import this repository's instructions and skills
 copilot
 ```
 
 On the first Copilot CLI launch, authenticate with `/login`, or provide `GH_TOKEN`/`GITHUB_TOKEN` when starting the VM. To use Autopilot mode, press `Shift+Tab` in Copilot CLI until Autopilot is selected. Copilot persists the selected mode in its user configuration.
 
-The host directory containing this repository's parent is available at `/workspace`. This repository is therefore `/workspace/rmz-ai-vm`, and future projects can be created alongside it. Edits made there remain on the host and are available after recreating the VM.
+The host directory containing this repository's parent is available at `/workspace`; this repository is mounted under `/workspace/<repository-folder>`, and future projects can be created alongside it. Edits made there remain on the host and are available after recreating the VM.
 
 ## Recreate or tune the VM
 
@@ -114,15 +115,17 @@ vagrant up
 VM_CPUS=6 VM_MEMORY_MB=12288 vagrant up
 ```
 
-To rerun provisioning after changing `provision/bootstrap.sh`:
+To rerun provisioning after changing `provision/bootstrap.sh` or to install new system dependencies in an existing VM:
 
 ```sh
 vagrant provision
 ```
 
+The first `vagrant provision` after this settings update installs `jq`, which `copilot-init` uses to merge managed settings. After that, repository Copilot settings or asset changes only require running `copilot-init` inside the VM.
+
 ## Copilot CLI recovery
 
-If Copilot exits unexpectedly and the terminal begins printing mouse-report sequences, run `reset` or open a new terminal. A `no platform package found` error indicates an incomplete or mismatched Copilot CLI installation; repair the pinned installation with:
+If Copilot exits unexpectedly and the terminal begins printing mouse-report sequences, run `reset` or open a new terminal. A `no platform package found` error indicates an incomplete Copilot CLI installation; reinstall the current upstream release with:
 
 ```sh
 vagrant provision
@@ -151,24 +154,16 @@ The default suite does not boot a VM. To run the separate end-to-end Vagrant smo
 RUN_VAGRANT_SMOKE=1 bats tests/vagrant-smoke.bats
 ```
 
-The smoke test uses an isolated project copy, a unique VirtualBox name, and a temporary `VAGRANT_HOME`; it checks that Copilot runs and its managed settings match the repository, then destroys the test VM.
+The smoke test uses an isolated project copy, a unique VirtualBox name, and a temporary `VAGRANT_HOME`; it checks that Copilot opens in a pseudo-terminal before initialization, runs `copilot-init`, verifies the imported assets, and destroys the test VM.
 
-## Copilot skills
+## Copilot configuration
 
-Keep VM-wide Copilot CLI skills in `.github/skills/<skill-name>/SKILL.md` in this repository. These files are versioned with the VM configuration. During provisioning, each skill directory is linked into the VM user's `~/.copilot/skills`, so the skills are available when working in any project and remain backed by this mounted repository.
-
-Keep concise, global Copilot CLI instructions in `.github/copilot-instructions.md`. Provisioning links this file to `~/.copilot/copilot-instructions.md`, making it available across projects.
-
-VM-wide Copilot CLI settings managed by this repository belong in `provision/copilot-settings.json`. Provisioning merges those settings into `~/.copilot/settings.json`, preserving unrelated user preferences while enforcing GPT-6 Luna (`model: gpt-6-luna`) with maximum reasoning effort (`effortLevel: max`); it also hides the Gists home tab. After changing the settings file while the VM is running, run `vagrant provision` from the host to apply it.
-
-After adding a skill or the instructions file while the VM is running, run `vagrant provision` from the host to register it. Edits to already-linked skill or instruction files are reflected immediately from the repository; there is no separate copy to keep in sync.
+Provisioning installs the system-wide `copilot-init` command but leaves the VM user's `~/.copilot` profile untouched. Run `copilot-init` inside the VM to import this repository's `.github/copilot-instructions.md` and skills containing `SKILL.md`, and to merge `provision/copilot-settings.json` into `~/.copilot/settings.json`. The managed settings select `gpt-6-luna` at `max` effort, hide the Gists tab, and enable every documented `footer.show*` status-line field (the CLI calls this display the footer). Each run reapplies those managed values while preserving unrelated preferences and conflicting user-owned instruction or skill targets. The instruction and skill links point directly into the mounted repository, so edits to existing assets are picked up without copying; re-running adds new skills and removes stale repository skill links. Restart the CLI to apply changed settings, or run `/skills reload` after changing skills in an active session.
 
 ## Installed tooling
 
-The provisioner installs Git, Git LFS, GitHub CLI, Node.js 22, the pinned official Copilot CLI version `1.0.88`, Microsoft Visual Studio Code, Python 3 with virtual-environment support, ripgrep, fd, jq, direnv, tmux, zsh, build tools, ShellCheck, and Bats.
+The provisioner installs Git, Git LFS, GitHub CLI, GitHub Copilot CLI using the [official Linux install script](https://gh.io/copilot-install), Microsoft Visual Studio Code, Python 3 with virtual-environment support, jq, ripgrep, fd, direnv, tmux, zsh, build tools, ShellCheck, and Bats. The installer runs as root and places the CLI in `/usr/local/bin`, so `copilot` is available system-wide; `copilot-init` is registered there as a separate manual command. No Node.js or npm installation is required. Reprovision with `vagrant provision` to install the latest stable CLI release.
 
-The Copilot CLI is installed for the `vagrant` user under `~/.local/bin`; the provisioner adds that directory to `PATH`. The `copilot-auto` alias starts Copilot CLI; Autopilot itself is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
-
-Node.js is installed from the explicit, signed NodeSource APT repository configuration rather than by executing a remote setup script. To update the Copilot CLI version, change `COPILOT_VERSION` in `provision/bootstrap.sh` and recreate or reprovision the VM. Reprovisioning always reconciles the pinned package, repairing incomplete platform dependencies even when the `copilot` launcher already exists.
+Autopilot is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
 
 The default VM is headless (`vb.gui = false`), so the graphical VS Code application is installed but is not displayed inside the VM unless you add a graphical desktop and display support. For a typical workflow, use VS Code on the host with the `/workspace` folder, or connect using VS Code Remote - SSH.
