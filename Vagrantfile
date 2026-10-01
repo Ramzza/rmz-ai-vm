@@ -27,7 +27,6 @@ Vagrant.configure("2") do |config|
     path: "provision/bootstrap.sh",
     args: [
       ENV.fetch("VM_USER", "vagrant"),
-      File.join(workspace_repository, ".github", "skills"),
-      File.join(workspace_repository, ".github", "copilot-instructions.md")
+      File.join(workspace_repository, "provision", "copilot-init.sh")
     ]
 end

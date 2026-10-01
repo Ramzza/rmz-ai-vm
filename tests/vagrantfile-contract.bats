@@ -139,12 +139,12 @@ RUBY
   [ "${output}" = "override-dev|2|4096" ]
 }
 
-@test "PRD-004: passes repository instructions and skills paths to bootstrap" {
+@test "PRD-004: passes the manual initialization script to bootstrap" {
   repo_name="${REPO_ROOT##*/}"
   run evaluate_vagrantfile "${VAGRANTFILE}" \
     -u VM_USER TEST_CAPTURE_PROVISION=1
   [ "${status}" -eq 0 ]
-  expected_output="provision/bootstrap.sh|vagrant|/workspace/${repo_name}/.github/skills"
-  expected_output="${expected_output}|/workspace/${repo_name}/.github/copilot-instructions.md"
+  expected_output="provision/bootstrap.sh|vagrant"
+  expected_output="${expected_output}|/workspace/${repo_name}/provision/copilot-init.sh"
   [ "${output}" = "${expected_output}" ]
 }

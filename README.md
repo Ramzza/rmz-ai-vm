@@ -84,6 +84,7 @@ From this directory:
 ```sh
 vagrant up
 vagrant ssh
+copilot-init # optional: import this repository's instructions and skills
 copilot
 ```
 
@@ -151,15 +152,15 @@ The default suite does not boot a VM. To run the separate end-to-end Vagrant smo
 RUN_VAGRANT_SMOKE=1 bats tests/vagrant-smoke.bats
 ```
 
-The smoke test uses an isolated project copy, a unique VirtualBox name, and a temporary `VAGRANT_HOME`; it connects over SSH, checks that `copilot --version` runs, and destroys the test VM.
+The smoke test uses an isolated project copy, a unique VirtualBox name, and a temporary `VAGRANT_HOME`; it checks that Copilot opens in a pseudo-terminal before initialization, runs `copilot-init`, verifies the imported assets, and destroys the test VM.
 
 ## Copilot configuration
 
-Provisioning links `.github/copilot-instructions.md` to the VM user's `~/.copilot/copilot-instructions.md` and repository skills with a `SKILL.md` file to `~/.copilot/skills/<skill-name>`. The links point into the mounted repository, so edits do not need to be copied again. Existing user settings and instruction or skill targets are preserved rather than overwritten. After adding a skill, run `vagrant provision`; in an already-running Copilot session, run `/skills reload` or restart the CLI. Authenticate on first launch with `/login`.
+Provisioning installs the system-wide `copilot-init` command but leaves the VM user's `~/.copilot` profile untouched. Run `copilot-init` inside the VM when you want to import this repository's `.github/copilot-instructions.md` and skills containing `SKILL.md` into `~/.copilot`. It links directly into the mounted repository, so edits to existing assets are picked up without copying. Re-running the command adds new skills and removes stale repository skill links; it preserves `settings.json` and conflicting user-owned targets. After initializing an already-running Copilot session, run `/skills reload` or restart the CLI.
 
 ## Installed tooling
 
-The provisioner installs Git, Git LFS, GitHub CLI, GitHub Copilot CLI using the [official Linux install script](https://gh.io/copilot-install), Microsoft Visual Studio Code, Python 3 with virtual-environment support, ripgrep, fd, direnv, tmux, zsh, build tools, ShellCheck, and Bats. The installer runs as root and places the CLI in `/usr/local/bin`, so `copilot` is available system-wide. No Node.js or npm installation is required. Reprovision with `vagrant provision` to install the latest stable CLI release.
+The provisioner installs Git, Git LFS, GitHub CLI, GitHub Copilot CLI using the [official Linux install script](https://gh.io/copilot-install), Microsoft Visual Studio Code, Python 3 with virtual-environment support, ripgrep, fd, direnv, tmux, zsh, build tools, ShellCheck, and Bats. The installer runs as root and places the CLI in `/usr/local/bin`, so `copilot` is available system-wide; `copilot-init` is registered there as a separate manual command. No Node.js or npm installation is required. Reprovision with `vagrant provision` to install the latest stable CLI release.
 
 Autopilot is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
 

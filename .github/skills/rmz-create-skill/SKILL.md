@@ -10,7 +10,7 @@ Use this skill only to create a new custom skill for the rmz-ai-vm environment. 
 ## Source of truth and location
 
 - Store every repository skill at `.github/skills/<skill-name>/SKILL.md`.
-- Treat this repository as the source of truth. Provisioning links repository skills into the guest user's `~/.copilot/skills`; do not create or maintain a separate machine-local copy.
+- Treat this repository as the source of truth. The guest user can run `copilot-init` to link repository skills into `~/.copilot/skills`; do not create or maintain a separate machine-local copy.
 - Use a concise, lowercase, kebab-case skill name beginning with `rmz-`; use it for both the directory and matching `name` frontmatter value.
 - Include YAML frontmatter with a `name` and a specific `description`. The description should say what the skill does and when Copilot should use it.
 - Add supporting scripts or references inside that skill's directory only when they materially help the skill perform its task. Keep instructions and resources versioned together.
@@ -26,4 +26,4 @@ Use this skill only to create a new custom skill for the rmz-ai-vm environment. 
 ## Validation
 
 - Check that the skill directory name matches its frontmatter `name`, that the YAML frontmatter parses, and that paths and commands in the instructions are accurate.
-- Provisioning links each repository skill into `~/.copilot/skills/<skill-name>` without overwriting an existing user-owned target.
+- `copilot-init` links each repository skill into `~/.copilot/skills/<skill-name>` without overwriting an existing user-owned target.
