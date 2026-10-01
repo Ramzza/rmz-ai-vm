@@ -115,11 +115,13 @@ vagrant up
 VM_CPUS=6 VM_MEMORY_MB=12288 vagrant up
 ```
 
-To rerun provisioning after changing `provision/bootstrap.sh`:
+To rerun provisioning after changing `provision/bootstrap.sh` or to install new system dependencies in an existing VM:
 
 ```sh
 vagrant provision
 ```
+
+The first `vagrant provision` after this settings update installs `jq`, which `copilot-init` uses to merge managed settings. After that, repository Copilot settings or asset changes only require running `copilot-init` inside the VM.
 
 ## Copilot CLI recovery
 
@@ -156,11 +158,11 @@ The smoke test uses an isolated project copy, a unique VirtualBox name, and a te
 
 ## Copilot configuration
 
-Provisioning installs the system-wide `copilot-init` command but leaves the VM user's `~/.copilot` profile untouched. Run `copilot-init` inside the VM when you want to import this repository's `.github/copilot-instructions.md` and skills containing `SKILL.md` into `~/.copilot`. It links directly into the mounted repository, so edits to existing assets are picked up without copying. Re-running the command adds new skills and removes stale repository skill links; it preserves `settings.json` and conflicting user-owned targets. After initializing an already-running Copilot session, run `/skills reload` or restart the CLI.
+Provisioning installs the system-wide `copilot-init` command but leaves the VM user's `~/.copilot` profile untouched. Run `copilot-init` inside the VM to import this repository's `.github/copilot-instructions.md` and skills containing `SKILL.md`, and to merge `provision/copilot-settings.json` into `~/.copilot/settings.json`. The managed settings select `gpt-6-luna` at `max` effort, hide the Gists tab, and enable every documented `footer.show*` status-line field (the CLI calls this display the footer). Each run reapplies those managed values while preserving unrelated preferences and conflicting user-owned instruction or skill targets. The instruction and skill links point directly into the mounted repository, so edits to existing assets are picked up without copying; re-running adds new skills and removes stale repository skill links. Restart the CLI to apply changed settings, or run `/skills reload` after changing skills in an active session.
 
 ## Installed tooling
 
-The provisioner installs Git, Git LFS, GitHub CLI, GitHub Copilot CLI using the [official Linux install script](https://gh.io/copilot-install), Microsoft Visual Studio Code, Python 3 with virtual-environment support, ripgrep, fd, direnv, tmux, zsh, build tools, ShellCheck, and Bats. The installer runs as root and places the CLI in `/usr/local/bin`, so `copilot` is available system-wide; `copilot-init` is registered there as a separate manual command. No Node.js or npm installation is required. Reprovision with `vagrant provision` to install the latest stable CLI release.
+The provisioner installs Git, Git LFS, GitHub CLI, GitHub Copilot CLI using the [official Linux install script](https://gh.io/copilot-install), Microsoft Visual Studio Code, Python 3 with virtual-environment support, jq, ripgrep, fd, direnv, tmux, zsh, build tools, ShellCheck, and Bats. The installer runs as root and places the CLI in `/usr/local/bin`, so `copilot` is available system-wide; `copilot-init` is registered there as a separate manual command. No Node.js or npm installation is required. Reprovision with `vagrant provision` to install the latest stable CLI release.
 
 Autopilot is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
 

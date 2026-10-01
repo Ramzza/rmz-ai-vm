@@ -13,17 +13,24 @@ setup() {
   TEST_VERSION_LOG="${TEST_DIRECTORY}/installer-version"
   TEST_NPM_LOG="${TEST_DIRECTORY}/npm.log"
   TEST_RUNUSER_LOG="${TEST_DIRECTORY}/runuser.log"
+  TEST_APT_LOG="${TEST_DIRECTORY}/apt-get.log"
   TEST_COPILOT_INIT_SOURCE="${TEST_DIRECTORY}/copilot-init.sh"
   TEST_INIT_LOG="${TEST_DIRECTORY}/copilot-init.log"
   mkdir -p "${MOCK_BIN}" "${TEST_DEV_HOME}"
   export TEST_DEV_HOME TEST_DEV_USER TEST_REAL_RM TEST_INSTALL_PREFIX \
-    TEST_CURL_LOG TEST_VERSION_LOG TEST_NPM_LOG TEST_RUNUSER_LOG TEST_INIT_LOG
+    TEST_CURL_LOG TEST_VERSION_LOG TEST_NPM_LOG TEST_RUNUSER_LOG TEST_APT_LOG \
+    TEST_INIT_LOG
   export PATH="${MOCK_BIN}:${TEST_INSTALL_PREFIX}/bin:${PATH}"
 
-  for command in apt-get git node code chown direnv; do
+  for command in git node code chown direnv; do
     printf '%s\n' '#!/usr/bin/env bash' 'exit 0' >"${MOCK_BIN}/${command}"
     chmod +x "${MOCK_BIN}/${command}"
   done
+
+  cat >"${MOCK_BIN}/apt-get" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${TEST_APT_LOG:?}"
+EOF
 
   cat >"${MOCK_BIN}/install" <<'EOF'
 #!/usr/bin/env bash
@@ -99,6 +106,7 @@ EOF
   chmod +x \
     "${MOCK_BIN}/getent" \
     "${MOCK_BIN}/install" \
+    "${MOCK_BIN}/apt-get" \
     "${MOCK_BIN}/runuser" \
     "${MOCK_BIN}/curl" \
     "${MOCK_BIN}/npm" \
@@ -142,6 +150,8 @@ EOF
 @test "PRD-004: exposes a manual copilot-init command" {
   run run_bootstrap
 
+  [ "${status}" -eq 0 ]
+  run grep -E -q '(^|[[:space:]])jq([[:space:]]|$)' "${TEST_APT_LOG}"
   [ "${status}" -eq 0 ]
   [ -f "${TEST_INSTALL_PREFIX}/bin/copilot-init" ]
   [ -x "${TEST_INSTALL_PREFIX}/bin/copilot-init" ]

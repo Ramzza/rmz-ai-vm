@@ -3,6 +3,7 @@
 setup() {
   REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
   COPILOT_INIT_SOURCE="${REPO_ROOT}/provision/copilot-init.sh"
+  COPILOT_SETTINGS_SOURCE="${REPO_ROOT}/provision/copilot-settings.json"
   TEST_DIRECTORY="$(mktemp -d)"
   TEST_REPOSITORY="${TEST_DIRECTORY}/repo"
   TEST_HOME="${TEST_DIRECTORY}/home"
@@ -16,6 +17,8 @@ setup() {
   if [[ -f "${COPILOT_INIT_SOURCE}" ]]; then
     cp "${COPILOT_INIT_SOURCE}" "${TEST_REPOSITORY}/provision/copilot-init.sh"
   fi
+  cp "${COPILOT_SETTINGS_SOURCE}" \
+    "${TEST_REPOSITORY}/provision/copilot-settings.json"
   printf '%s\n' 'Test-only Copilot instructions' >"${TEST_INSTRUCTIONS_SOURCE}"
   printf '%s\n' 'name: rmz-test' >"${TEST_SKILLS_SOURCE}/rmz-test/SKILL.md"
 }
@@ -28,15 +31,41 @@ run_init() {
   env HOME="${TEST_HOME}" bash "${TEST_REPOSITORY}/provision/copilot-init.sh"
 }
 
+assert_managed_settings() {
+  local settings_path="$1"
+  local expected_hidden_tabs="$2"
+
+  jq -e --argjson expected_hidden_tabs "${expected_hidden_tabs}" '
+    .model == "gpt-6-luna"
+    and .effortLevel == "max"
+    and .tabs.hide == $expected_hidden_tabs
+    and (
+      [
+        .footer.showModelEffort,
+        .footer.showDirectory,
+        .footer.showBranch,
+        .footer.showContextWindow,
+        .footer.showQuota,
+        .footer.showAgent,
+        .footer.showAiUsed,
+        .footer.showCodeChanges,
+        .footer.showUsername,
+        .footer.showSandbox,
+        .footer.showYolo,
+        .footer.showCustom
+      ] | all(.[]; . == true)
+    )
+  ' "${settings_path}" >/dev/null
+}
+
 @test "PRD-004: provides a standalone copilot-init script" {
   [ -f "${COPILOT_INIT_SOURCE}" ]
 }
 
 @test "PRD-004: links repository instructions and skills idempotently" {
   mkdir -p "${TEST_HOME}/.copilot"
-  printf '{"theme":"dim","tabs":{"hide":["issues"]}}\n' \
+  printf '{"theme":"dim","model":"user-model","effortLevel":"low","tabs":{"sort":["issues"],"hide":["issues"]},"footer":{"showBranch":false}}\n' \
     >"${TEST_HOME}/.copilot/settings.json"
-  cp "${TEST_HOME}/.copilot/settings.json" "${TEST_DIRECTORY}/settings-before.json"
 
   run run_init
 
@@ -50,15 +79,27 @@ run_init() {
   [ "${status}" -eq 0 ]
   [ "${output}" = "${TEST_SKILLS_SOURCE}/rmz-test" ]
   [ -f "${TEST_HOME}/.copilot/skills/rmz-test/SKILL.md" ]
-  run cmp "${TEST_DIRECTORY}/settings-before.json" \
+  run assert_managed_settings "${TEST_HOME}/.copilot/settings.json" \
+    '["issues","gists"]'
+  [ "${status}" -eq 0 ]
+  run jq -e '.theme == "dim" and .tabs.sort == ["issues"]' \
     "${TEST_HOME}/.copilot/settings.json"
   [ "${status}" -eq 0 ]
+  cp "${TEST_HOME}/.copilot/settings.json" "${TEST_DIRECTORY}/settings-after.json"
 
   run run_init
 
   [ "${status}" -eq 0 ]
-  run cmp "${TEST_DIRECTORY}/settings-before.json" \
+  run cmp "${TEST_DIRECTORY}/settings-after.json" \
     "${TEST_HOME}/.copilot/settings.json"
+  [ "${status}" -eq 0 ]
+}
+
+@test "PRD-004: creates managed settings when no user settings exist" {
+  run run_init
+
+  [ "${status}" -eq 0 ]
+  run assert_managed_settings "${TEST_HOME}/.copilot/settings.json" '["gists"]'
   [ "${status}" -eq 0 ]
 }
 
@@ -83,16 +124,18 @@ run_init() {
   run readlink -f "${TEST_HOME}/.copilot/skills/rmz-new"
   [ "${status}" -eq 0 ]
   [ "${output}" = "${TEST_SKILLS_SOURCE}/rmz-new" ]
+  run assert_managed_settings "${TEST_HOME}/.copilot/settings.json" '["gists"]'
+  [ "${status}" -eq 0 ]
 }
 
-@test "PRD-004: preserves user-owned settings and conflicting targets" {
+@test "PRD-004: preserves unrelated preferences and conflicting targets" {
   mkdir -p "${TEST_HOME}/.copilot/skills/rmz-test"
-  printf '%s\n' '{"theme":"dark"}' >"${TEST_HOME}/.copilot/settings.json"
+  printf '%s\n' '{"theme":"dark","model":"gpt-5.4"}' \
+    >"${TEST_HOME}/.copilot/settings.json"
   printf '%s\n' 'User-owned instructions' \
     >"${TEST_HOME}/.copilot/copilot-instructions.md"
   printf '%s\n' 'User-owned skill' \
     >"${TEST_HOME}/.copilot/skills/rmz-test/SKILL.md"
-  cp "${TEST_HOME}/.copilot/settings.json" "${TEST_DIRECTORY}/settings-before.json"
   cp "${TEST_HOME}/.copilot/copilot-instructions.md" \
     "${TEST_DIRECTORY}/instructions-before.md"
   cp "${TEST_HOME}/.copilot/skills/rmz-test/SKILL.md" \
@@ -103,7 +146,9 @@ run_init() {
   [ "${status}" -eq 0 ]
   [ ! -L "${TEST_HOME}/.copilot/copilot-instructions.md" ]
   [ ! -L "${TEST_HOME}/.copilot/skills/rmz-test" ]
-  run cmp "${TEST_DIRECTORY}/settings-before.json" \
+  run assert_managed_settings "${TEST_HOME}/.copilot/settings.json" '["gists"]'
+  [ "${status}" -eq 0 ]
+  run jq -e '.theme == "dark"' \
     "${TEST_HOME}/.copilot/settings.json"
   [ "${status}" -eq 0 ]
   run cmp "${TEST_DIRECTORY}/instructions-before.md" \
@@ -112,6 +157,21 @@ run_init() {
   run cmp "${TEST_DIRECTORY}/skill-before.md" \
     "${TEST_HOME}/.copilot/skills/rmz-test/SKILL.md"
   [ "${status}" -eq 0 ]
+}
+
+@test "PRD-004: rejects malformed user settings without changing the profile" {
+  mkdir -p "${TEST_HOME}/.copilot"
+  printf '{invalid json\n' >"${TEST_HOME}/.copilot/settings.json"
+  cp "${TEST_HOME}/.copilot/settings.json" "${TEST_DIRECTORY}/settings-before.json"
+
+  run run_init
+
+  [ "${status}" -ne 0 ]
+  run cmp "${TEST_DIRECTORY}/settings-before.json" \
+    "${TEST_HOME}/.copilot/settings.json"
+  [ "${status}" -eq 0 ]
+  [ ! -e "${TEST_HOME}/.copilot/skills" ]
+  [ ! -e "${TEST_HOME}/.copilot/copilot-instructions.md" ]
 }
 
 @test "PRD-004: rejects missing repository Copilot assets" {

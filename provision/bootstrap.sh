@@ -25,6 +25,7 @@ apt-get install --yes --no-install-recommends \
   git-lfs \
   gh \
   gnupg \
+  jq \
   ripgrep \
   tmux \
   unzip \

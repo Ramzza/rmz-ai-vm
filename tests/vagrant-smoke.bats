@@ -143,7 +143,27 @@ test "$(readlink -f "$HOME/.copilot/skills/rmz-test")" = \
 test -f "$HOME/.copilot/skills/rmz-test/SKILL.md"
 copilot skill list | grep -F 'rmz-test'
 copilot --version
-test ! -e "$HOME/.copilot/settings.json"
+jq -e '
+  .model == "gpt-6-luna"
+  and .effortLevel == "max"
+  and .tabs.hide == ["gists"]
+  and (
+    [
+      .footer.showModelEffort,
+      .footer.showDirectory,
+      .footer.showBranch,
+      .footer.showContextWindow,
+      .footer.showQuota,
+      .footer.showAgent,
+      .footer.showAiUsed,
+      .footer.showCodeChanges,
+      .footer.showUsername,
+      .footer.showSandbox,
+      .footer.showYolo,
+      .footer.showCustom
+    ] | all(.[]; . == true)
+  )
+' "$HOME/.copilot/settings.json"
 EOF
 )"
 
