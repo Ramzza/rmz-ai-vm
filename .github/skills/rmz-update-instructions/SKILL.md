@@ -1,9 +1,9 @@
 ---
 name: rmz-update-instructions
-description: Add concise, non-duplicative global Copilot instructions to rmz-ai-vm.
+description: Add concise, non-duplicative repository Copilot instructions to rmz-ai-vm.
 ---
 
-# Update global Copilot instructions
+# Update repository Copilot instructions
 
 Use this skill to add a new general instruction to `.github/copilot-instructions.md`.
 
@@ -13,4 +13,4 @@ Use this skill to add a new general instruction to `.github/copilot-instructions
 4. Review the complete file to ensure the addition is clear, non-duplicative, and consistent with the existing instructions.
 5. Put the change on a feature branch based on `origin/main`. Commit only files changed for this request using a Conventional Commit, push the branch, and open a PR or update the existing PR for that branch.
 
-The file is provisioned as `$HOME/.copilot/copilot-instructions.md` in the VM. Edit only the repository copy; reprovisioning is not needed for edits to the file's contents.
+The instructions remain repository-local; VM provisioning does not link them into `$HOME/.copilot`.

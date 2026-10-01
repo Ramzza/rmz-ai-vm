@@ -4,12 +4,6 @@ set -euo pipefail
 readonly DEV_USER="${1:-vagrant}"
 DEV_HOME="$(getent passwd "${DEV_USER}" | cut -d: -f6)"
 readonly DEV_HOME
-readonly COPILOT_VERSION="1.0.88"
-readonly SKILLS_SOURCE="${2:?Copilot skills source path is required}"
-readonly INSTRUCTIONS_SOURCE="${3:?Copilot instructions source path is required}"
-readonly COPILOT_SETTINGS_SOURCE="${4:?Copilot settings source path is required}"
-readonly COPILOT_SETTINGS_MERGER="${5:?Copilot settings merger path is required}"
-readonly COPILOT_INSTALLER="${6:?Copilot installer path is required}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -25,7 +19,6 @@ apt-get install --yes --no-install-recommends \
   git-lfs \
   gh \
   gnupg \
-  jq \
   ripgrep \
   tmux \
   unzip \
@@ -37,85 +30,7 @@ apt-get install --yes --no-install-recommends \
 
 git lfs install --system
 
-if ! command -v node >/dev/null 2>&1; then
-  install -d -m 0755 /etc/apt/keyrings
-  curl --fail --silent --show-error \
-    https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key |
-    gpg --dearmor --yes -o /etc/apt/keyrings/nodesource.gpg
-  chmod 0644 /etc/apt/keyrings/nodesource.gpg
-  printf '%s\n' \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
-    > /etc/apt/sources.list.d/nodesource.list
-  apt-get update
-  apt-get install --yes --no-install-recommends nodejs
-fi
-
-install -d -o "${DEV_USER}" -g "${DEV_USER}" "${DEV_HOME}/.local"
-if [ ! -f "${COPILOT_INSTALLER}" ]; then
-  printf 'Copilot installer not found: %s\n' "${COPILOT_INSTALLER}" >&2
-  exit 1
-fi
-bash "${COPILOT_INSTALLER}" \
-  "${DEV_USER}" \
-  "${DEV_HOME}" \
-  "${COPILOT_VERSION}"
-
-if [ ! -d "${SKILLS_SOURCE}" ]; then
-  printf 'Copilot skills directory not found: %s\n' "${SKILLS_SOURCE}" >&2
-  exit 1
-fi
-
-readonly COPILOT_SKILLS="${DEV_HOME}/.copilot/skills"
-install -d -o "${DEV_USER}" -g "${DEV_USER}" "${COPILOT_SKILLS}"
-for skill_path in "${SKILLS_SOURCE}"/*/; do
-  [ -f "${skill_path}SKILL.md" ] || continue
-  skill_name="${skill_path%/}"
-  skill_name="${skill_name##*/}"
-  skill_target="${COPILOT_SKILLS}/${skill_name}"
-
-  if [ -L "${skill_target}" ] && [ "$(readlink "${skill_target}")" = "${skill_path}" ]; then
-    continue
-  fi
-  if [ -e "${skill_target}" ] || [ -L "${skill_target}" ]; then
-    printf 'Skipping Copilot skill %s; target already exists: %s\n' \
-      "${skill_name}" "${skill_target}" >&2
-    continue
-  fi
-
-  ln -s "${skill_path}" "${skill_target}"
-done
-
-if [ ! -f "${INSTRUCTIONS_SOURCE}" ]; then
-  printf 'Copilot instructions file not found: %s\n' "${INSTRUCTIONS_SOURCE}" >&2
-  exit 1
-fi
-
-if [ ! -f "${COPILOT_SETTINGS_SOURCE}" ]; then
-  printf 'Copilot settings file not found: %s\n' "${COPILOT_SETTINGS_SOURCE}" >&2
-  exit 1
-fi
-
-if [ ! -f "${COPILOT_SETTINGS_MERGER}" ]; then
-  printf 'Copilot settings merger not found: %s\n' "${COPILOT_SETTINGS_MERGER}" >&2
-  exit 1
-fi
-
-readonly INSTRUCTIONS_TARGET="${DEV_HOME}/.copilot/copilot-instructions.md"
-if [ -L "${INSTRUCTIONS_TARGET}" ] &&
-  [ "$(readlink "${INSTRUCTIONS_TARGET}")" = "${INSTRUCTIONS_SOURCE}" ]; then
-  :
-elif [ -e "${INSTRUCTIONS_TARGET}" ] || [ -L "${INSTRUCTIONS_TARGET}" ]; then
-  printf 'Skipping Copilot instructions; target already exists: %s\n' \
-    "${INSTRUCTIONS_TARGET}" >&2
-else
-  ln -s "${INSTRUCTIONS_SOURCE}" "${INSTRUCTIONS_TARGET}"
-fi
-
-readonly COPILOT_SETTINGS_TARGET="${DEV_HOME}/.copilot/settings.json"
-bash "${COPILOT_SETTINGS_MERGER}" \
-  "${COPILOT_SETTINGS_SOURCE}" \
-  "${COPILOT_SETTINGS_TARGET}"
-chown "${DEV_USER}:${DEV_USER}" "${COPILOT_SETTINGS_TARGET}"
+curl -fsSL https://gh.io/copilot-install | bash
 
 if ! command -v code >/dev/null 2>&1; then
   install -d -m 0755 /etc/apt/keyrings
@@ -129,8 +44,6 @@ if ! command -v code >/dev/null 2>&1; then
   apt-get install --yes --no-install-recommends code
 fi
 
-install -d -o "${DEV_USER}" -g "${DEV_USER}" "${DEV_HOME}/.config"
-
 cat > "${DEV_HOME}/.bashrc.d-copilot" <<'EOF'
 # Coding environment helpers
 if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
@@ -139,14 +52,12 @@ fi
 
 eval "$(direnv hook bash)"
 
-export PATH="$HOME/.local/bin:$PATH"
 export EDITOR="${EDITOR:-nano}"
 export VISUAL="${VISUAL:-${EDITOR}}"
 export WORKSPACE="/workspace"
 
 alias croot='cd /workspace'
 alias gs='git status --short --branch'
-alias copilot-auto='copilot'
 
 cd /workspace
 EOF
