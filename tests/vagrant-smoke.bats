@@ -23,6 +23,10 @@ setup() {
   cp "${REPO_ROOT}/Vagrantfile" "${PROJECT_DIRECTORY}/Vagrantfile"
   cp "${REPO_ROOT}/vm-config.json" "${PROJECT_DIRECTORY}/vm-config.json"
   cp -R "${REPO_ROOT}/provision" "${PROJECT_DIRECTORY}/provision"
+  mkdir -p "${PROJECT_DIRECTORY}/.github"
+  cp "${REPO_ROOT}/.github/copilot-instructions.md" \
+    "${PROJECT_DIRECTORY}/.github/copilot-instructions.md"
+  cp -R "${REPO_ROOT}/.github/skills" "${PROJECT_DIRECTORY}/.github/skills"
 }
 
 teardown() {
@@ -50,7 +54,7 @@ vagrant_in_project() {
   )
 }
 
-@test "PRD-003: Vagrant provisions and runs the official Copilot CLI" {
+@test "PRD-003/PRD-004: Vagrant provisions Copilot CLI and repository assets" {
   run vagrant_in_project up --provider virtualbox
   [ "${status}" -eq 0 ]
 
@@ -62,9 +66,14 @@ set -eu
   test -n "$version"
   printf '%s\n' "$copilot_path"
   printf '%s\n' "$version"
-test ! -e "$HOME/.copilot/settings.json"
-test ! -e "$HOME/.copilot/copilot-instructions.md"
-test ! -e "$HOME/.copilot/skills"
+  test -L "$HOME/.copilot/copilot-instructions.md"
+  test "$(readlink -f "$HOME/.copilot/copilot-instructions.md")" = \
+    "/workspace/rmz-ai-vm/.github/copilot-instructions.md"
+  test -L "$HOME/.copilot/skills/rmz-test"
+  test "$(readlink -f "$HOME/.copilot/skills/rmz-test")" = \
+    "/workspace/rmz-ai-vm/.github/skills/rmz-test"
+  test -f "$HOME/.copilot/skills/rmz-test/SKILL.md"
+  test ! -e "$HOME/.copilot/settings.json"
 EOF
 )"
 

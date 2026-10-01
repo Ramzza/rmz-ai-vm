@@ -25,5 +25,5 @@ Use this skill only to update an existing custom skill for the rmz-ai-vm environ
 ## Validation
 
 - Check that the directory name still matches its frontmatter `name`, that the YAML frontmatter parses, and that paths and commands in the instructions are accurate.
-- Skills remain repository-local; VM provisioning does not install them globally.
+- The repository file is canonical; VM provisioning links it into `$HOME/.copilot/skills/<skill-name>`.
 - Update the README if the skill storage convention changes.

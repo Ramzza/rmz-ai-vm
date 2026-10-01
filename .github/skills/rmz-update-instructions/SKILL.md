@@ -13,4 +13,4 @@ Use this skill to add a new general instruction to `.github/copilot-instructions
 4. Review the complete file to ensure the addition is clear, non-duplicative, and consistent with the existing instructions.
 5. Put the change on a feature branch based on `origin/main`. Commit only files changed for this request using a Conventional Commit, push the branch, and open a PR or update the existing PR for that branch.
 
-The instructions remain repository-local; VM provisioning does not link them into `$HOME/.copilot`.
+The repository file is canonical; VM provisioning links it into `$HOME/.copilot/copilot-instructions.md`.

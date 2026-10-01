@@ -89,7 +89,7 @@ copilot
 
 On the first Copilot CLI launch, authenticate with `/login`, or provide `GH_TOKEN`/`GITHUB_TOKEN` when starting the VM. To use Autopilot mode, press `Shift+Tab` in Copilot CLI until Autopilot is selected. Copilot persists the selected mode in its user configuration.
 
-The host directory containing this repository's parent is available at `/workspace`. This repository is therefore `/workspace/rmz-ai-vm`, and future projects can be created alongside it. Edits made there remain on the host and are available after recreating the VM.
+The host directory containing this repository's parent is available at `/workspace`; this repository is mounted under `/workspace/<repository-folder>`, and future projects can be created alongside it. Edits made there remain on the host and are available after recreating the VM.
 
 ## Recreate or tune the VM
 
@@ -155,7 +155,7 @@ The smoke test uses an isolated project copy, a unique VirtualBox name, and a te
 
 ## Copilot configuration
 
-Provisioning only installs the Copilot CLI. It does not modify the VM user's `~/.copilot` directory or add repository-managed settings, skills, or instructions globally. Copilot uses its own defaults; authenticate on first launch with `/login`.
+Provisioning links `.github/copilot-instructions.md` to the VM user's `~/.copilot/copilot-instructions.md` and repository skills with a `SKILL.md` file to `~/.copilot/skills/<skill-name>`. The links point into the mounted repository, so edits do not need to be copied again. Existing user settings and instruction or skill targets are preserved rather than overwritten. After adding a skill, run `vagrant provision`; in an already-running Copilot session, run `/skills reload` or restart the CLI. Authenticate on first launch with `/login`.
 
 ## Installed tooling
 

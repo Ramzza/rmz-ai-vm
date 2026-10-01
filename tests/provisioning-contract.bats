@@ -73,25 +73,9 @@ EOF
 
   TEST_SKILLS_SOURCE="${TEST_DIRECTORY}/skills"
   TEST_INSTRUCTIONS_SOURCE="${TEST_DIRECTORY}/copilot-instructions.md"
-  TEST_SETTINGS_SOURCE="${TEST_DIRECTORY}/copilot-settings.json"
-  TEST_SETTINGS_MERGER="${TEST_DIRECTORY}/configure-copilot-settings.sh"
-  TEST_COPILOT_INSTALLER="${TEST_DIRECTORY}/install-copilot.sh"
-  mkdir -p "${TEST_SKILLS_SOURCE}/rmz-test"
+  mkdir -p "${TEST_SKILLS_SOURCE}/rmz-test" "${TEST_SKILLS_SOURCE}/notes"
   printf '%s\n' 'name: rmz-test' >"${TEST_SKILLS_SOURCE}/rmz-test/SKILL.md"
   printf '%s\n' 'Test-only Copilot instructions' >"${TEST_INSTRUCTIONS_SOURCE}"
-  printf '%s\n' '{"model":"test-model","effortLevel":"medium","tabs":{"hide":[]}}' \
-    >"${TEST_SETTINGS_SOURCE}"
-  cat >"${TEST_SETTINGS_MERGER}" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-cp -- "$1" "$2"
-EOF
-  cat >"${TEST_COPILOT_INSTALLER}" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-runuser -u "$1" -- npm install --global --prefix "$2/.local" "@github/copilot@$3"
-EOF
-  chmod +x "${TEST_SETTINGS_MERGER}" "${TEST_COPILOT_INSTALLER}"
 
   cat >"${MOCK_BIN}/npm" <<'EOF'
 #!/usr/bin/env bash
@@ -126,10 +110,7 @@ run_bootstrap() {
   env -u PREFIX -u VERSION bash "${BOOTSTRAP_SCRIPT}" \
     "${TEST_DEV_USER}" \
     "${TEST_SKILLS_SOURCE}" \
-    "${TEST_INSTRUCTIONS_SOURCE}" \
-    "${TEST_SETTINGS_SOURCE}" \
-    "${TEST_SETTINGS_MERGER}" \
-    "${TEST_COPILOT_INSTALLER}"
+    "${TEST_INSTRUCTIONS_SOURCE}"
 }
 
 @test "PRD-003: installs Copilot from GitHub's official Linux installer without npm" {
@@ -152,12 +133,12 @@ unset
 unset
 EOF
   [ "${status}" -eq 0 ]
-  [ ! -e "${TEST_DEV_HOME}/.copilot" ]
+  [ ! -e "${TEST_DEV_HOME}/.copilot/settings.json" ]
   run grep -E -q 'npm|nodejs|NodeSource' "${BOOTSTRAP_SCRIPT}"
   [ "${status}" -ne 0 ]
 }
 
-@test "PRD-004: leaves the user's Copilot configuration untouched" {
+@test "PRD-004: imports repository instructions and skills without changing settings" {
   mkdir -p "${TEST_DEV_HOME}/.copilot"
   printf '{"theme":"dim","tabs":{"sort":["issues"],"hide":["issues"]}}\n' \
     >"${TEST_DEV_HOME}/.copilot/settings.json"
@@ -166,11 +147,71 @@ EOF
   run run_bootstrap
 
   [ "${status}" -eq 0 ]
+  [ -L "${TEST_DEV_HOME}/.copilot/copilot-instructions.md" ]
+  run readlink -f "${TEST_DEV_HOME}/.copilot/copilot-instructions.md"
+  [ "${status}" -eq 0 ]
+  [ "${output}" = "${TEST_INSTRUCTIONS_SOURCE}" ]
+  [ -L "${TEST_DEV_HOME}/.copilot/skills/rmz-test" ]
+  run readlink -f "${TEST_DEV_HOME}/.copilot/skills/rmz-test"
+  [ "${status}" -eq 0 ]
+  [ "${output}" = "${TEST_SKILLS_SOURCE}/rmz-test" ]
+  [ -f "${TEST_DEV_HOME}/.copilot/skills/rmz-test/SKILL.md" ]
   run cmp "${TEST_DIRECTORY}/settings-before.json" \
     "${TEST_DEV_HOME}/.copilot/settings.json"
   [ "${status}" -eq 0 ]
-  [ ! -e "${TEST_DEV_HOME}/.copilot/copilot-instructions.md" ]
-  [ ! -e "${TEST_DEV_HOME}/.copilot/skills" ]
+
+  run run_bootstrap
+
+  [ "${status}" -eq 0 ]
+  [ -L "${TEST_DEV_HOME}/.copilot/copilot-instructions.md" ]
+  [ -L "${TEST_DEV_HOME}/.copilot/skills/rmz-test" ]
+  run cmp "${TEST_DIRECTORY}/settings-before.json" \
+    "${TEST_DEV_HOME}/.copilot/settings.json"
+  [ "${status}" -eq 0 ]
+}
+
+@test "PRD-004: preserves user-owned instruction and skill targets" {
+  mkdir -p "${TEST_DEV_HOME}/.copilot/skills/rmz-test"
+  printf '%s\n' 'User instructions' \
+    >"${TEST_DEV_HOME}/.copilot/copilot-instructions.md"
+  printf '%s\n' 'User-owned skill' \
+    >"${TEST_DEV_HOME}/.copilot/skills/rmz-test/SKILL.md"
+  cp "${TEST_DEV_HOME}/.copilot/copilot-instructions.md" \
+    "${TEST_DIRECTORY}/user-instructions-before.md"
+  cp "${TEST_DEV_HOME}/.copilot/skills/rmz-test/SKILL.md" \
+    "${TEST_DIRECTORY}/user-skill-before.md"
+
+  run run_bootstrap
+
+  [ "${status}" -eq 0 ]
+  [ ! -L "${TEST_DEV_HOME}/.copilot/copilot-instructions.md" ]
+  [ ! -L "${TEST_DEV_HOME}/.copilot/skills/rmz-test" ]
+  run cmp "${TEST_DIRECTORY}/user-instructions-before.md" \
+    "${TEST_DEV_HOME}/.copilot/copilot-instructions.md"
+  [ "${status}" -eq 0 ]
+  run cmp "${TEST_DIRECTORY}/user-skill-before.md" \
+    "${TEST_DEV_HOME}/.copilot/skills/rmz-test/SKILL.md"
+  [ "${status}" -eq 0 ]
+}
+
+@test "PRD-004: reports missing repository asset sources" {
+  run env -u PREFIX -u VERSION bash "${BOOTSTRAP_SCRIPT}" \
+    "${TEST_DEV_USER}" \
+    "${TEST_DIRECTORY}/missing-skills" \
+    "${TEST_INSTRUCTIONS_SOURCE}"
+
+  [ "${status}" -ne 0 ]
+  [[ "${output}" == *"Copilot skills directory not found"* ]]
+  [ ! -e "${TEST_DEV_HOME}/.copilot" ]
+
+  run env -u PREFIX -u VERSION bash "${BOOTSTRAP_SCRIPT}" \
+    "${TEST_DEV_USER}" \
+    "${TEST_SKILLS_SOURCE}" \
+    "${TEST_DIRECTORY}/missing-instructions"
+
+  [ "${status}" -ne 0 ]
+  [[ "${output}" == *"Copilot instructions file not found"* ]]
+  [ ! -e "${TEST_DEV_HOME}/.copilot" ]
 }
 
 @test "PRD-006: starts Bash sessions in the mounted workspace" {

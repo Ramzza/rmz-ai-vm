@@ -4,6 +4,7 @@ require "json"
 
 vm_settings = JSON.parse(File.read(File.join(__dir__, "vm-config.json")))
 vm_name = ENV.fetch("VM_NAME", vm_settings.fetch("name"))
+workspace_repository = File.join("/workspace", File.basename(__dir__))
 
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/jammy64"
@@ -24,5 +25,9 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision "shell",
     path: "provision/bootstrap.sh",
-    args: [ENV.fetch("VM_USER", "vagrant")]
+    args: [
+      ENV.fetch("VM_USER", "vagrant"),
+      File.join(workspace_repository, ".github", "skills"),
+      File.join(workspace_repository, ".github", "copilot-instructions.md")
+    ]
 end
