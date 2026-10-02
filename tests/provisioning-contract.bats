@@ -12,14 +12,15 @@ setup() {
   TEST_CURL_LOG="${TEST_DIRECTORY}/curl.log"
   TEST_VERSION_LOG="${TEST_DIRECTORY}/installer-version"
   TEST_NPM_LOG="${TEST_DIRECTORY}/npm.log"
+  TEST_NODE_SOURCE_LOG="${TEST_DIRECTORY}/nodesource-setup.log"
   TEST_RUNUSER_LOG="${TEST_DIRECTORY}/runuser.log"
   TEST_APT_LOG="${TEST_DIRECTORY}/apt-get.log"
   TEST_COPILOT_INIT_SOURCE="${TEST_DIRECTORY}/copilot-init.sh"
   TEST_INIT_LOG="${TEST_DIRECTORY}/copilot-init.log"
   mkdir -p "${MOCK_BIN}" "${TEST_DEV_HOME}"
   export TEST_DEV_HOME TEST_DEV_USER TEST_REAL_RM TEST_INSTALL_PREFIX \
-    TEST_CURL_LOG TEST_VERSION_LOG TEST_NPM_LOG TEST_RUNUSER_LOG TEST_APT_LOG \
-    TEST_INIT_LOG
+    TEST_CURL_LOG TEST_VERSION_LOG TEST_NPM_LOG TEST_NODE_SOURCE_LOG \
+    TEST_RUNUSER_LOG TEST_APT_LOG TEST_INIT_LOG
   export PATH="${MOCK_BIN}:${TEST_INSTALL_PREFIX}/bin:${PATH}"
 
   for command in git node code chown direnv; do
@@ -65,8 +66,17 @@ EOF
   cat >"${MOCK_BIN}/curl" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-printf '%s\n' "$@" >"${TEST_CURL_LOG:?}"
-cat <<'INSTALLER'
+printf '%s\n' "$@" >>"${TEST_CURL_LOG:?}"
+case "$*" in
+  *https://deb.nodesource.com/setup_22.x)
+    cat <<'INSTALLER'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' 'NodeSource setup ran' >"${TEST_NODE_SOURCE_LOG:?}"
+INSTALLER
+    ;;
+  *https://gh.io/copilot-install)
+    cat <<'INSTALLER'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "${VERSION-unset}" "${PREFIX-unset}" >"${TEST_VERSION_LOG:?}"
@@ -78,6 +88,12 @@ printf '%s\n' 'GitHub Copilot CLI test binary'
 CLI
 chmod +x "${TEST_INSTALL_PREFIX}/bin/copilot"
 INSTALLER
+    ;;
+  *)
+    printf 'Unexpected curl invocation: %s\n' "$*" >&2
+    false
+    ;;
+esac
 EOF
 
   cat >"${TEST_COPILOT_INIT_SOURCE}" <<'EOF'
@@ -123,19 +139,25 @@ run_bootstrap() {
     "${TEST_COPILOT_INIT_SOURCE}"
 }
 
-@test "PRD-003: installs Copilot officially and provisions npm" {
+@test "PRD-003: installs Copilot officially and provisions Node.js v22 with npm" {
   run run_bootstrap
 
   [ "${status}" -eq 0 ]
   [ -x "${TEST_INSTALL_PREFIX}/bin/copilot" ]
+  [ -f "${TEST_NODE_SOURCE_LOG}" ]
+  [ "$(cat "${TEST_NODE_SOURCE_LOG}")" = "NodeSource setup ran" ]
   run copilot --version
   [ "${status}" -eq 0 ]
   [ "${output}" = "GitHub Copilot CLI test binary" ]
   [ ! -e "${TEST_NPM_LOG}" ]
   [ ! -e "${TEST_RUNUSER_LOG}" ]
-  run grep -E -q '(^|[[:space:]])npm([[:space:]]|$)' "${TEST_APT_LOG}"
+  run grep -E -q '(^|[[:space:]])nodejs([[:space:]]|$)' "${TEST_APT_LOG}"
   [ "${status}" -eq 0 ]
+  run grep -E -q '(^|[[:space:]])npm([[:space:]]|$)' "${TEST_APT_LOG}"
+  [ "${status}" -ne 0 ]
   run diff -u - "${TEST_CURL_LOG}" <<'EOF'
+-fsSL
+https://deb.nodesource.com/setup_22.x
 -fsSL
 https://gh.io/copilot-install
 EOF
