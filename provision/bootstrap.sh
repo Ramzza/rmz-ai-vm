@@ -26,7 +26,6 @@ apt-get install --yes --no-install-recommends \
   gh \
   gnupg \
   jq \
-  npm \
   ripgrep \
   tmux \
   unzip \
@@ -35,6 +34,10 @@ apt-get install --yes --no-install-recommends \
   python3-pip \
   python3-venv \
   shellcheck
+
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get update
+apt-get install --yes --no-install-recommends nodejs
 
 git lfs install --system
 

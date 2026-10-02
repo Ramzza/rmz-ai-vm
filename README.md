@@ -162,7 +162,7 @@ Provisioning installs the system-wide `copilot-init` command but leaves the VM u
 
 ## Installed tooling
 
-The provisioner installs Git, Git LFS, GitHub CLI, GitHub Copilot CLI using the [official Linux install script](https://gh.io/copilot-install), Microsoft Visual Studio Code, Python 3 with virtual-environment support, Node.js and npm, jq, ripgrep, fd, direnv, tmux, zsh, build tools, ShellCheck, and Bats. The installer runs as root and places the CLI in `/usr/local/bin`, so `copilot` is available system-wide; `copilot-init` is registered there as a separate manual command. Node.js and npm are installed from Ubuntu packages for development; Copilot itself is installed separately with GitHub's official installer. Reprovision with `vagrant provision` to install the latest stable CLI release.
+The provisioner installs Git, Git LFS, GitHub CLI, GitHub Copilot CLI using the [official Linux install script](https://gh.io/copilot-install), Microsoft Visual Studio Code, Python 3 with virtual-environment support, Node.js v22 and npm, jq, ripgrep, fd, direnv, tmux, zsh, build tools, ShellCheck, and Bats. The installer runs as root and places the CLI in `/usr/local/bin`, so `copilot` is available system-wide; `copilot-init` is registered there as a separate manual command. Node.js v22 and npm are installed from NodeSource's 22.x APT repository for development; Copilot itself is installed separately with GitHub's official installer. Reprovision with `vagrant provision` to install the latest stable CLI release.
 
 Autopilot is selected inside the CLI with `Shift+Tab`. The `code` command is also available.
 
