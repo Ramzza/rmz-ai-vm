@@ -26,6 +26,7 @@ apt-get install --yes --no-install-recommends \
   gh \
   gnupg \
   jq \
+  npm \
   ripgrep \
   tmux \
   unzip \
