@@ -123,7 +123,7 @@ run_bootstrap() {
     "${TEST_COPILOT_INIT_SOURCE}"
 }
 
-@test "PRD-003: installs Copilot from GitHub's official Linux installer without npm" {
+@test "PRD-003: installs Copilot officially and provisions npm" {
   run run_bootstrap
 
   [ "${status}" -eq 0 ]
@@ -133,6 +133,8 @@ run_bootstrap() {
   [ "${output}" = "GitHub Copilot CLI test binary" ]
   [ ! -e "${TEST_NPM_LOG}" ]
   [ ! -e "${TEST_RUNUSER_LOG}" ]
+  run grep -E -q '(^|[[:space:]])npm([[:space:]]|$)' "${TEST_APT_LOG}"
+  [ "${status}" -eq 0 ]
   run diff -u - "${TEST_CURL_LOG}" <<'EOF'
 -fsSL
 https://gh.io/copilot-install
@@ -143,8 +145,6 @@ unset
 unset
 EOF
   [ "${status}" -eq 0 ]
-  run grep -E -q 'npm|nodejs|NodeSource' "${BOOTSTRAP_SCRIPT}"
-  [ "${status}" -ne 0 ]
 }
 
 @test "PRD-004: exposes a manual copilot-init command" {
