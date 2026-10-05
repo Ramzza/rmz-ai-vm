@@ -26,9 +26,13 @@ Use this skill only when the user asks to create a root `AGENTS.md` in a specifi
 
    Keep all five headings. Put brief prose or bullets under Project context and concise bullets under the other sections. If a section has no useful, verified facts, write `- None identified.` Do not add other headings.
 5. Keep the root file focused on stable, repository-wide guidance:
-   - Include only stable, actionable facts supported by repository evidence. Put project purpose, stack, directory roles, and architecture boundaries in Project context; conventions in Conventions; exact development and test commands in Scripts; and verified restrictions, security/data handling, migration, generated-file, or deployment limits in Constraints.
+   - In Project context, briefly explain what the project does, how its major parts fit together, and the responsibility of each top-level project folder in one concise line. Omit `.git`, dependency, cache, and generated-output folders unless agents need to work with them.
+   - In Conventions, include evidenced language/runtime versions, linter and formatter rules, naming patterns, and established abstractions or interfaces agents should reuse.
+   - In Scripts, list the exact build and test commands agents need; never guess.
+   - In Constraints, state explicit do's and don'ts, non-obvious landmines, hard preferences, and verified restrictions such as security/data handling, migrations, generated files, or deployment boundaries.
+   - Include only stable, actionable facts supported by repository evidence or explicit user direction; do not infer policy or hard preferences. Reference canonical documentation rather than copying it.
    - Verify commands against manifests, scripts, CI, or canonical docs. Do not guess commands, structure, stack, or policies.
-   - Reference canonical documentation rather than copying the README, PRD, or architecture docs. Where a PRD exists, point to it for requirements instead of duplicating them.
+   - Where a PRD exists, point to it for requirements instead of duplicating them.
    - Check existing instructions for overlap and conflicts. Do not invent precedence rules; omit disputed guidance and report unresolved conflicts rather than editing other files.
    - Exclude temporary task requirements, vague advice, repeated formatter/linter settings, and large examples.
    - Describe natural-language rules as guidance, not as guarantees; identify CI, permissions, hooks, or other enforcement only when verified.
