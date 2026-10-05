@@ -374,3 +374,41 @@ EOF
   [ "${status}" -eq 0 ]
   [ "${output}" = "${TEST_WORKSPACE}" ]
 }
+
+@test "PRD-008: provisions an Autopilot alias with a 30 AI-credit session limit" {
+  run run_bootstrap
+  [ "${status}" -eq 0 ]
+
+  TEST_ALIAS_BIN="${TEST_DIRECTORY}/alias-bin"
+  TEST_WORKSPACE="${TEST_DIRECTORY}/workspace"
+  TEST_COPILOT_ARGS_LOG="${TEST_DIRECTORY}/copilot-args.log"
+  mkdir -p "${TEST_ALIAS_BIN}" "${TEST_WORKSPACE}"
+  export TEST_WORKSPACE TEST_COPILOT_ARGS_LOG
+
+  cat >"${TEST_ALIAS_BIN}/copilot" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$@" >"${TEST_COPILOT_ARGS_LOG:?}"
+EOF
+  chmod +x "${TEST_ALIAS_BIN}/copilot"
+
+  run env HOME="${TEST_DEV_HOME}" PATH="${TEST_ALIAS_BIN}:${PATH}" \
+    bash --noprofile --norc -c '
+      shopt -s expand_aliases
+      cd() {
+        if [[ "$#" -eq 1 && "$1" == "/workspace" ]]; then
+          builtin cd -- "${TEST_WORKSPACE}"
+        else
+          builtin cd -- "$@"
+        fi
+      }
+      source "$HOME/.bashrc.d-copilot"
+      eval "rmz-autopilot"
+    '
+  [ "${status}" -eq 0 ]
+  run diff -u - "${TEST_COPILOT_ARGS_LOG}" <<'EOF'
+--autopilot
+--max-ai-credits
+30
+EOF
+  [ "${status}" -eq 0 ]
+}

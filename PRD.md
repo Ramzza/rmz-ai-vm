@@ -20,5 +20,7 @@ Provide a reproducible Ubuntu development VM with GitHub Copilot CLI while keepi
   **Verification:** `tests/provisioning-contract.bats::PRD-006`.
 - **PRD-007 - Latest GitHub CLI provisioning:** Provisioning configures GitHub's official stable APT repository and installs `gh` without a version pin, so new VMs receive the latest stable GitHub CLI available at provisioning time (currently v2.102.0).
   **Verification:** `tests/provisioning-contract.bats::PRD-007` verifies the official signing key and `signed-by` source, refreshes package metadata after repository setup, and installs the unpinned `gh` package.
+- **PRD-008 - Autopilot alias:** Provisioning adds the `rmz-autopilot` alias to the development user's Bash environment. It starts Copilot in Autopilot mode with a 30 AI-credit limit for the session.
+  **Verification:** `tests/provisioning-contract.bats::PRD-008` sources the provisioned Bash helper and verifies the alias invokes Copilot with the required flags.
 
 The Vagrant smoke test is an opt-in end-to-end check requiring Vagrant, VirtualBox, hardware virtualization, and internet access.

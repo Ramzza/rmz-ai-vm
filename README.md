@@ -86,9 +86,10 @@ vagrant up
 vagrant ssh
 copilot-init # optional: import this repository's instructions and skills
 copilot
+rmz-autopilot # optional: start in Autopilot mode with a 30 AI-credit session limit
 ```
 
-On the first Copilot CLI launch, authenticate with `/login`, or provide `GH_TOKEN`/`GITHUB_TOKEN` when starting the VM. To use Autopilot mode, press `Shift+Tab` in Copilot CLI until Autopilot is selected. Copilot persists the selected mode in its user configuration.
+On the first Copilot CLI launch, authenticate with `/login`, or provide `GH_TOKEN`/`GITHUB_TOKEN` when starting the VM. Run `rmz-autopilot` to start Copilot in Autopilot mode with a 30 AI-credit limit for that session. You can also press `Shift+Tab` in Copilot CLI to change modes; Copilot persists the selected mode in its user configuration.
 
 The host directory containing this repository's parent is available at `/workspace`; this repository is mounted under `/workspace/<repository-folder>`, and future projects can be created alongside it. Edits made there remain on the host and are available after recreating the VM.
 
