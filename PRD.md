@@ -22,5 +22,7 @@ Provide a reproducible Ubuntu development VM with GitHub Copilot CLI while keepi
   **Verification:** `tests/provisioning-contract.bats::PRD-007` verifies the official signing key and `signed-by` source, refreshes package metadata after repository setup, and installs the unpinned `gh` package.
 - **PRD-008 - Autopilot alias:** Provisioning adds the `rmz-autopilot` alias to the development user's Bash environment. It starts Copilot in Autopilot mode with a 30 AI-credit limit for the session.
   **Verification:** `tests/provisioning-contract.bats::PRD-008` sources the provisioned Bash helper and verifies the alias invokes Copilot with the required flags.
+- **PRD-009 - Bundled document skills and PDFtk prerequisite:** The repository includes the `convert-excel-to-md`, `convert-pdf-to-md`, `convert-word-to-md`, `md-to-docx`, and `pdftk-server` Copilot skills with their bundled scripts and references. Running `copilot-init` links all five into the user's Copilot profile. Provisioning installs `pdftk` for the `pdftk-server` skill.
+  **Verification:** `tests/copilot-init.bats::PRD-009` checks that all five skills, scripts, and references are accessible through links created by `copilot-init`; `tests/provisioning-contract.bats::PRD-009` checks that the APT package install includes `pdftk`.
 
 The Vagrant smoke test is an opt-in end-to-end check requiring Vagrant, VirtualBox, hardware virtualization, and internet access.

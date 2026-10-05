@@ -183,3 +183,46 @@ assert_managed_settings() {
   [[ "${output}" == *"Copilot instructions file not found"* ]]
   [ ! -e "${TEST_HOME}/.copilot/skills" ]
 }
+
+@test "PRD-009: links bundled non-rmz skills and their resources" {
+  run env HOME="${TEST_HOME}" bash "${COPILOT_INIT_SOURCE}"
+
+  [ "${status}" -eq 0 ]
+  for skill_name in \
+    convert-excel-to-md \
+    convert-pdf-to-md \
+    convert-word-to-md \
+    md-to-docx \
+    pdftk-server; do
+    skill_source="${REPO_ROOT}/.github/skills/${skill_name}"
+    skill_target="${TEST_HOME}/.copilot/skills/${skill_name}"
+
+    [ -f "${skill_source}/SKILL.md" ]
+    [ -L "${skill_target}" ]
+    run readlink -f -- "${skill_target}"
+    [ "${status}" -eq 0 ]
+    [ "${output}" = "${skill_source}" ]
+    run grep -Fqx "name: ${skill_name}" "${skill_source}/SKILL.md"
+    [ "${status}" -eq 0 ]
+  done
+
+  for resource in \
+    convert-excel-to-md/references/setup.md \
+    convert-excel-to-md/scripts/convert_excel_to_md.py \
+    convert-excel-to-md/scripts/requirements.txt \
+    convert-pdf-to-md/references/setup.md \
+    convert-pdf-to-md/scripts/convert_pdf_to_md.py \
+    convert-pdf-to-md/scripts/requirements.txt \
+    convert-word-to-md/references/setup.md \
+    convert-word-to-md/scripts/convert_word_to_md.py \
+    convert-word-to-md/scripts/requirements.txt \
+    md-to-docx/scripts/md-to-docx.mjs \
+    md-to-docx/scripts/package.json \
+    pdftk-server/references/download.md \
+    pdftk-server/references/pdftk-cli-examples.md \
+    pdftk-server/references/pdftk-man-page.md \
+    pdftk-server/references/pdftk-server-license.md \
+    pdftk-server/references/third-party-materials.md; do
+    [ -f "${TEST_HOME}/.copilot/skills/${resource}" ]
+  done
+}
