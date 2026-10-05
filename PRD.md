@@ -18,5 +18,7 @@ Provide a reproducible Ubuntu development VM with GitHub Copilot CLI while keepi
   **Verification:** `tests/rmz-copilot.bats` tests prefixed `PRD-005`; `tests/rmz-copilot-windows.ps1` in the Windows CI job verifies nonzero guest shell exit statuses.
 - **PRD-006 - Workspace-first SSH sessions:** An interactive `vagrant ssh` session starts in `/workspace`, the mounted host projects directory.
   **Verification:** `tests/provisioning-contract.bats::PRD-006`.
+- **PRD-007 - Latest GitHub CLI provisioning:** Provisioning configures GitHub's official stable APT repository and installs `gh` without a version pin, so new VMs receive the latest stable GitHub CLI available at provisioning time (currently v2.102.0).
+  **Verification:** `tests/provisioning-contract.bats::PRD-007` verifies the official signing key and `signed-by` source, refreshes package metadata after repository setup, and installs the unpinned `gh` package.
 
 The Vagrant smoke test is an opt-in end-to-end check requiring Vagrant, VirtualBox, hardware virtualization, and internet access.

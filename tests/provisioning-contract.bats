@@ -8,6 +8,7 @@ setup() {
   TEST_DEV_HOME="${TEST_DIRECTORY}/home"
   TEST_DEV_USER="developer"
   TEST_REAL_RM="$(command -v rm)"
+  TEST_REAL_CHMOD="$(command -v chmod)"
   TEST_INSTALL_PREFIX="${TEST_DIRECTORY}/usr-local"
   TEST_CURL_LOG="${TEST_DIRECTORY}/curl.log"
   TEST_VERSION_LOG="${TEST_DIRECTORY}/installer-version"
@@ -15,12 +16,21 @@ setup() {
   TEST_NODE_SOURCE_LOG="${TEST_DIRECTORY}/nodesource-setup.log"
   TEST_RUNUSER_LOG="${TEST_DIRECTORY}/runuser.log"
   TEST_APT_LOG="${TEST_DIRECTORY}/apt-get.log"
+  TEST_INSTALL_LOG="${TEST_DIRECTORY}/install.log"
+  TEST_CHMOD_LOG="${TEST_DIRECTORY}/chmod.log"
+  TEST_TEE_LOG="${TEST_DIRECTORY}/tee.log"
+  TEST_SEQUENCE_LOG="${TEST_DIRECTORY}/sequence.log"
   TEST_COPILOT_INIT_SOURCE="${TEST_DIRECTORY}/copilot-init.sh"
   TEST_INIT_LOG="${TEST_DIRECTORY}/copilot-init.log"
   mkdir -p "${MOCK_BIN}" "${TEST_DEV_HOME}"
   export TEST_DEV_HOME TEST_DEV_USER TEST_REAL_RM TEST_INSTALL_PREFIX \
     TEST_CURL_LOG TEST_VERSION_LOG TEST_NPM_LOG TEST_NODE_SOURCE_LOG \
-    TEST_RUNUSER_LOG TEST_APT_LOG TEST_INIT_LOG
+    TEST_RUNUSER_LOG TEST_APT_LOG TEST_INSTALL_LOG TEST_CHMOD_LOG \
+    TEST_TEE_LOG TEST_SEQUENCE_LOG TEST_REAL_CHMOD TEST_INIT_LOG
+  : >"${TEST_TEE_LOG}"
+  : >"${TEST_SEQUENCE_LOG}"
+  : >"${TEST_INSTALL_LOG}"
+  : >"${TEST_CHMOD_LOG}"
   export PATH="${MOCK_BIN}:${TEST_INSTALL_PREFIX}/bin:${PATH}"
 
   for command in git node code chown direnv; do
@@ -31,18 +41,36 @@ setup() {
   cat >"${MOCK_BIN}/apt-get" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"${TEST_APT_LOG:?}"
+printf 'apt-get %s\n' "$*" >>"${TEST_SEQUENCE_LOG:?}"
 EOF
 
   cat >"${MOCK_BIN}/install" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-while [ "$#" -gt 0 ]; do
+  printf '%s\n' "$*" >>"${TEST_INSTALL_LOG:?}"
+  while [ "$#" -gt 0 ]; do
   case "$1" in
     -d) shift ;;
     -g|-m|-o) shift 2 ;;
-    *) mkdir -p -- "$1"; shift ;;
+    *)
+      if [[ "$1" != /etc/* ]]; then
+        mkdir -p -- "$1"
+      fi
+      shift
+      ;;
   esac
 done
+EOF
+
+  cat >"${MOCK_BIN}/chmod" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$*" in
+  *"/etc/apt/keyrings/"*)
+    printf '%s\n' "$*" >>"${TEST_CHMOD_LOG:?}"
+    ;;
+  *) exec "${TEST_REAL_CHMOD:?}" "$@" ;;
+esac
 EOF
 
   cat >"${MOCK_BIN}/getent" <<'EOF'
@@ -68,6 +96,9 @@ EOF
 set -euo pipefail
 printf '%s\n' "$@" >>"${TEST_CURL_LOG:?}"
 case "$*" in
+  *https://cli.github.com/packages/githubcli-archive-keyring.gpg)
+    printf '%s\n' 'GitHub CLI test signing key'
+    ;;
   *https://deb.nodesource.com/setup_22.x)
     cat <<'INSTALLER'
 #!/usr/bin/env bash
@@ -94,6 +125,25 @@ INSTALLER
     false
     ;;
 esac
+EOF
+
+  cat >"${MOCK_BIN}/tee" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+destination="${1:?}"
+content="$(cat)"
+printf '%s\n%s\n' "${destination}" "${content}" >>"${TEST_TEE_LOG:?}"
+printf 'tee %s\n' "${destination}" >>"${TEST_SEQUENCE_LOG:?}"
+EOF
+
+  cat >"${MOCK_BIN}/dpkg" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$#" -ne 1 || "$1" != "--print-architecture" ]]; then
+  printf 'Unexpected dpkg invocation: %s\n' "$*" >&2
+  exit 1
+fi
+printf '%s\n' amd64
 EOF
 
   cat >"${TEST_COPILOT_INIT_SOURCE}" <<'EOF'
@@ -123,8 +173,11 @@ EOF
     "${MOCK_BIN}/getent" \
     "${MOCK_BIN}/install" \
     "${MOCK_BIN}/apt-get" \
+    "${MOCK_BIN}/chmod" \
     "${MOCK_BIN}/runuser" \
     "${MOCK_BIN}/curl" \
+    "${MOCK_BIN}/tee" \
+    "${MOCK_BIN}/dpkg" \
     "${MOCK_BIN}/npm" \
     "${MOCK_BIN}/rm"
 }
@@ -163,6 +216,8 @@ EOF
   [ "${status}" -ne 0 ]
   run diff -u - "${TEST_CURL_LOG}" <<'EOF'
 -fsSL
+https://cli.github.com/packages/githubcli-archive-keyring.gpg
+-fsSL
 https://deb.nodesource.com/setup_22.x
 -fsSL
 https://gh.io/copilot-install
@@ -173,6 +228,50 @@ unset
 unset
 EOF
   [ "${status}" -eq 0 ]
+}
+
+@test "PRD-007: installs latest gh from GitHub's official stable repository" {
+  run run_bootstrap
+
+  [ "${status}" -eq 0 ]
+  run grep -F -xq -- \
+    'https://cli.github.com/packages/githubcli-archive-keyring.gpg' \
+    "${TEST_CURL_LOG}"
+  [ "${status}" -eq 0 ]
+  run diff -u - "${TEST_INSTALL_LOG}" <<'EOF'
+-d -m 0755 /etc/apt/keyrings
+EOF
+  [ "${status}" -eq 0 ]
+  run diff -u - "${TEST_CHMOD_LOG}" <<'EOF'
+go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+EOF
+  [ "${status}" -eq 0 ]
+  run diff -u - "${TEST_TEE_LOG}" <<'EOF'
+/etc/apt/keyrings/githubcli-archive-keyring.gpg
+GitHub CLI test signing key
+/etc/apt/sources.list.d/github-cli.list
+deb [arch=amd64 signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main
+EOF
+  [ "${status}" -eq 0 ]
+  run grep -Fxq 'install --yes --no-install-recommends gh' "${TEST_APT_LOG}"
+  [ "${status}" -eq 0 ]
+  run grep -E -q '(^|[[:space:]])gh=[^[:space:]]' "${TEST_APT_LOG}"
+  [ "${status}" -ne 0 ]
+
+  repository_line="$(grep -nFx \
+    'tee /etc/apt/sources.list.d/github-cli.list' "${TEST_SEQUENCE_LOG}" |
+    cut -d: -f1)"
+  repository_update_line="$(awk -v repository_line="${repository_line}" \
+    'NR > repository_line && $0 == "apt-get update" { print NR; exit }' \
+    "${TEST_SEQUENCE_LOG}")"
+  gh_install_line="$(grep -nFx \
+    'apt-get install --yes --no-install-recommends gh' "${TEST_SEQUENCE_LOG}" |
+    cut -d: -f1)"
+  [ -n "${repository_line}" ]
+  [ -n "${repository_update_line}" ]
+  [ -n "${gh_install_line}" ]
+  [ "${repository_line}" -lt "${repository_update_line}" ]
+  [ "${repository_update_line}" -lt "${gh_install_line}" ]
 }
 
 @test "PRD-004: exposes a manual copilot-init command" {
