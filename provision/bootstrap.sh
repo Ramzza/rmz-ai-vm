@@ -23,7 +23,6 @@ apt-get install --yes --no-install-recommends \
   fd-find \
   git \
   git-lfs \
-  gh \
   gnupg \
   jq \
   ripgrep \
@@ -34,6 +33,16 @@ apt-get install --yes --no-install-recommends \
   python3-pip \
   python3-venv \
   shellcheck
+
+install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg |
+  tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null
+chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+printf '%s\n' \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" |
+  tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+apt-get update
+apt-get install --yes --no-install-recommends gh
 
 curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get update
