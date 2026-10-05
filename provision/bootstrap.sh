@@ -115,7 +115,7 @@ export WORKSPACE="/workspace"
 
 alias croot='cd /workspace'
 alias gs='git status --short --branch'
-alias rmz-autopilot='copilot --autopilot --max-ai-credits 30'
+alias rmz-autopilot='copilot --autopilot --max-ai-credits 30 --yolo'
 
 cd /workspace
 EOF
