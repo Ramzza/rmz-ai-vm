@@ -39,6 +39,9 @@ curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get update
 apt-get install --yes --no-install-recommends nodejs
 
+runuser -u "${DEV_USER}" -- env HOME="${DEV_HOME}" \
+  npm config set bin-links false --location=user
+
 git lfs install --system
 
 curl -fsSL https://gh.io/copilot-install | bash
