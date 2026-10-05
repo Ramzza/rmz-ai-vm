@@ -274,6 +274,16 @@ EOF
   [ "${repository_update_line}" -lt "${gh_install_line}" ]
 }
 
+@test "PRD-009: installs pdftk for the bundled PDFtk skill" {
+  run run_bootstrap
+
+  [ "${status}" -eq 0 ]
+  run grep -E -q \
+    '^install --yes --no-install-recommends .*([[:space:]])pdftk([[:space:]]|$)' \
+    "${TEST_APT_LOG}"
+  [ "${status}" -eq 0 ]
+}
+
 @test "PRD-004: exposes a manual copilot-init command" {
   run run_bootstrap
 
