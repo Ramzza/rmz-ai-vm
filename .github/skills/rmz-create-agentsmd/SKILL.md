@@ -17,8 +17,16 @@ Use this skill only when the user asks to create a root `AGENTS.md` in a specifi
    - CI workflows, test configuration, and documented verification commands.
    - Existing agent instructions, such as nested `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.github/instructions/`, and `.cursor/rules/`.
    - Database, security, generated-file, or deployment documentation when the repository uses those areas.
-4. Draft concise, actionable instructions from repository evidence. Include only sections that materially help agents make correct decisions, such as project purpose, directory responsibilities, exact development and test commands, architecture boundaries, conventions not already enforced by tools, security and data handling, migration practices, generated files, and completion reporting.
+4. Draft concise, actionable instructions from repository evidence using exactly these headings, in this order:
+   - `# AGENTS.md`
+   - `## Project context`
+   - `## Conventions`
+   - `## Scripts`
+   - `## Constraints`
+
+   Keep all five headings. Put brief prose or bullets under Project context and concise bullets under the other sections. If a section has no useful, verified facts, write `- None identified.` Do not add other headings.
 5. Keep the root file focused on stable, repository-wide guidance:
+   - Include only stable, actionable facts supported by repository evidence. Put project purpose, stack, directory roles, and architecture boundaries in Project context; conventions in Conventions; exact development and test commands in Scripts; and verified restrictions, security/data handling, migration, generated-file, or deployment limits in Constraints.
    - Verify commands against manifests, scripts, CI, or canonical docs. Do not guess commands, structure, stack, or policies.
    - Reference canonical documentation rather than copying the README, PRD, or architecture docs. Where a PRD exists, point to it for requirements instead of duplicating them.
    - Check existing instructions for overlap and conflicts. Do not invent precedence rules; omit disputed guidance and report unresolved conflicts rather than editing other files.
@@ -26,7 +34,8 @@ Use this skill only when the user asks to create a root `AGENTS.md` in a specifi
    - Describe natural-language rules as guidance, not as guarantees; identify CI, permissions, hooks, or other enforcement only when verified.
    - Keep package-specific rules out of the root file. Suggest nested files only when the repository has genuinely distinct local rules, and create them only if requested.
 6. Create `<repository-root>/AGENTS.md` once the inspection supports a useful, accurate file. The user's request to create it is authorization to write the file; do not stop at a draft unless the user asked for a proposal.
-7. Review the result against the repository evidence. Confirm it is at the root, concise, free of unsupported claims and contradictions, and that every listed command matches the repository. Report the file created, the main evidence used, validation performed, any unresolved conflicts, and any useful nested-file suggestions.
+7. Keep the completed file below 200 lines (maximum 199, including blank lines); shorten it if needed rather than dropping required, verified guidance.
+8. Review the result against the repository evidence. Confirm it is at the root, uses the required headings in order, has fewer than 200 lines, is concise and free of unsupported claims or contradictions, and that every listed command matches the repository. Report the file created, the main evidence used, validation performed, any unresolved conflicts, and any useful nested-file suggestions.
 
 ## Reference
 
