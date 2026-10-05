@@ -385,7 +385,7 @@ EOF
   [ "${output}" = "${TEST_WORKSPACE}" ]
 }
 
-@test "PRD-008: provisions an Autopilot alias with a 30 AI-credit session limit" {
+@test "PRD-008: provisions an Autopilot and YOLO alias with a 30 AI-credit session limit" {
   run run_bootstrap
   [ "${status}" -eq 0 ]
 
@@ -419,6 +419,7 @@ EOF
 --autopilot
 --max-ai-credits
 30
+--yolo
 EOF
   [ "${status}" -eq 0 ]
 }
