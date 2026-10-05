@@ -139,7 +139,7 @@ run_bootstrap() {
     "${TEST_COPILOT_INIT_SOURCE}"
 }
 
-@test "PRD-003: installs Copilot officially and provisions Node.js v22 with npm" {
+@test "PRD-003: installs Copilot officially and configures npm for shared folders" {
   run run_bootstrap
 
   [ "${status}" -eq 0 ]
@@ -149,8 +149,14 @@ run_bootstrap() {
   run copilot --version
   [ "${status}" -eq 0 ]
   [ "${output}" = "GitHub Copilot CLI test binary" ]
-  [ ! -e "${TEST_NPM_LOG}" ]
-  [ ! -e "${TEST_RUNUSER_LOG}" ]
+  run diff -u - "${TEST_NPM_LOG}" <<'EOF'
+config set bin-links false --location=user
+EOF
+  [ "${status}" -eq 0 ]
+  run diff -u - "${TEST_RUNUSER_LOG}" <<EOF
+-u ${TEST_DEV_USER} -- env HOME=${TEST_DEV_HOME} npm config set bin-links false --location=user
+EOF
+  [ "${status}" -eq 0 ]
   run grep -E -q '(^|[[:space:]])nodejs([[:space:]]|$)' "${TEST_APT_LOG}"
   [ "${status}" -eq 0 ]
   run grep -E -q '(^|[[:space:]])npm([[:space:]]|$)' "${TEST_APT_LOG}"
