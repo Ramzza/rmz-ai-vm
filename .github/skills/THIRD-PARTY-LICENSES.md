@@ -1,6 +1,6 @@
 # Third-party skill attribution
 
-The following skills and their bundled scripts and references are sourced from
+The following skills, including any bundled scripts and references, are sourced from
 [`github/awesome-copilot`](https://github.com/github/awesome-copilot):
 
 - `convert-excel-to-md`
@@ -8,6 +8,7 @@ The following skills and their bundled scripts and references are sourced from
 - `convert-word-to-md`
 - `md-to-docx`
 - `pdftk-server`
+- `playwright-explore-website`
 
 The upstream repository distributes these materials under the MIT License.
 Each skill's `SKILL.md` retains its upstream path and tree metadata.
