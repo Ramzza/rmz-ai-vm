@@ -24,5 +24,7 @@ Provide a reproducible Ubuntu development VM with GitHub Copilot CLI while keepi
   **Verification:** `tests/provisioning-contract.bats::PRD-008` sources the provisioned Bash helper and verifies the alias invokes Copilot with `--autopilot`, `--max-ai-credits 30`, and `--yolo`.
 - **PRD-009 - Bundled document skills and PDFtk prerequisite:** The repository includes the `convert-excel-to-md`, `convert-pdf-to-md`, `convert-word-to-md`, `md-to-docx`, and `pdftk-server` Copilot skills with their bundled scripts and references. Running `copilot-init` links all five into the user's Copilot profile. Provisioning installs `pdftk` for the `pdftk-server` skill.
   **Verification:** `tests/copilot-init.bats::PRD-009` checks that all five skills, scripts, and references are accessible through links created by `copilot-init`; `tests/provisioning-contract.bats::PRD-009` checks that the APT package install includes `pdftk`.
+- **PRD-010 - Playwright website exploration skill:** The repository includes the upstream `playwright-explore-website` skill with its website exploration and test-case instructions. Running `copilot-init` links it into the user's Copilot profile.
+  **Verification:** `tests/copilot-init.bats::PRD-010` checks the skill's name and core instructions and verifies that `copilot-init` links it into the user's profile.
 
 The Vagrant smoke test is an opt-in end-to-end check requiring Vagrant, VirtualBox, hardware virtualization, and internet access.

@@ -226,3 +226,27 @@ assert_managed_settings() {
     [ -f "${TEST_HOME}/.copilot/skills/${resource}" ]
   done
 }
+
+@test "PRD-010: links the Playwright website exploration skill" {
+  skill_name=playwright-explore-website
+  skill_source="${REPO_ROOT}/.github/skills/${skill_name}"
+  skill_target="${TEST_HOME}/.copilot/skills/${skill_name}"
+
+  run env HOME="${TEST_HOME}" bash "${COPILOT_INIT_SOURCE}"
+
+  [ "${status}" -eq 0 ]
+  [ -f "${skill_source}/SKILL.md" ]
+  [ -L "${skill_target}" ]
+  run readlink -f -- "${skill_target}"
+  [ "${status}" -eq 0 ]
+  [ "${output}" = "${skill_source}" ]
+  run grep -Fqx "name: ${skill_name}" "${skill_source}/SKILL.md"
+  [ "${status}" -eq 0 ]
+  run grep -Fqx '# Website Exploration for Testing' \
+    "${skill_source}/SKILL.md"
+  [ "${status}" -eq 0 ]
+  run grep -Fqx '6. Propose and generate test cases based on the exploration.' \
+    "${skill_source}/SKILL.md"
+  [ "${status}" -eq 0 ]
+  [ -f "${skill_target}/SKILL.md" ]
+}
