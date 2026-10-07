@@ -13,7 +13,7 @@ Use this skill only to create a new custom skill for the rmz-ai-vm environment. 
 - Treat this repository as the source of truth. The guest user can run `copilot-init` to link repository skills into `~/.copilot/skills`; do not create or maintain a separate machine-local copy.
 - Use a concise, lowercase, kebab-case skill name beginning with `rmz-`; use it for both the directory and matching `name` frontmatter value.
 - Include YAML frontmatter with a `name` and a specific `description`. The description should say what the skill does and when Copilot should use it.
-- Add supporting scripts or references inside that skill's directory only when they materially help the skill perform its task. Keep instructions and resources versioned together.
+- For deterministic, repeatable work, prefer scripts when they reduce token use and improve reliability. Keep supporting scripts and references inside that skill's directory, and add them only when they materially help the task.
 
 ## Writing a useful skill
 

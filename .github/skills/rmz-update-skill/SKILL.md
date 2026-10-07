@@ -12,7 +12,7 @@ Use this skill only to update an existing custom skill for the rmz-ai-vm environ
 - The canonical copy of every repository skill is in this repository at `.github/skills/<skill-name>/SKILL.md`. Update that copy; do not edit only a copy inside a project or on another machine.
 - Keep the skill directory and its `name` frontmatter value matching, concise, lowercase, and kebab-case.
 - Preserve valid YAML frontmatter with a specific `description` that says what the skill does and when Copilot should use it.
-- Keep supporting scripts and references inside the skill's directory, and update them only when needed for the requested change.
+- For deterministic, repeatable work, prefer scripts when they reduce token use and improve reliability. Keep supporting scripts and references inside the skill's directory, and update them only when needed for the requested change.
 
 ## Updating a useful skill
 
