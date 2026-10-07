@@ -5,7 +5,7 @@ description: Create a GitHub repository using the canonical rmz-ai-vm settings; 
 
 # Create a GitHub repository
 
-Use this workflow when creating a new project repository for the user. Match repository settings to `Ramzza/rmz-ai-vm`; do not rely on remembered defaults.
+Use this workflow when creating a new project repository for the user. Match the public visibility, MIT license, default-branch PR ruleset, secret scanning with push protection, and Dependabot security settings of `Ramzza/rmz-ai-vm`; read the reference's current configuration instead of relying on remembered defaults.
 
 1. Confirm the repository name, owner, purpose, and whether the user requested a specific stack. Use an `rmz-` prefix when required by the user or their instructions. Check that the target repository does not already exist.
 2. Read the reference repository's current settings before creating the new repository:
