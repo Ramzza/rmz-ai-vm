@@ -84,9 +84,15 @@ From this directory:
 ```sh
 vagrant up
 vagrant ssh
-copilot-init # optional: import this repository's instructions and skills
+copilot-init # optional: register the plugin marketplace and import instructions/settings
 copilot
 rmz-autopilot # optional: start in Autopilot and YOLO modes with a 30 AI-credit session limit
+```
+
+`copilot-init` registers the RMZ plugin marketplace, links this repository's instructions, and applies its managed settings. To load the RMZ skills, install the plugin after initialization:
+
+```sh
+copilot plugin install rmz-ai-skills@rmz-ai-marketplace
 ```
 
 On the first Copilot CLI launch, authenticate with `/login`, or provide `GH_TOKEN`/`GITHUB_TOKEN` when starting the VM. Run `rmz-autopilot` to start Copilot in Autopilot and YOLO modes with a 30 AI-credit limit for that session. You can also press `Shift+Tab` in Copilot CLI to change modes; Copilot persists the selected mode in its user configuration.
@@ -122,7 +128,7 @@ To rerun provisioning after changing `provision/bootstrap.sh` or to install new 
 vagrant provision
 ```
 
-The first `vagrant provision` after this settings update installs `jq`, which `copilot-init` uses to merge managed settings. After that, repository Copilot settings or asset changes only require running `copilot-init` inside the VM.
+The first `vagrant provision` after this settings update installs `jq`, which `copilot-init` uses to merge managed settings. After that, VM repository instruction or settings changes only require rerunning `copilot-init`; marketplace plugin changes are managed with `copilot plugin update <plugin-name>`.
 
 ## Copilot CLI recovery
 
@@ -155,13 +161,13 @@ The default suite does not boot a VM. To run the separate end-to-end Vagrant smo
 RUN_VAGRANT_SMOKE=1 bats tests/vagrant-smoke.bats
 ```
 
-The smoke test uses an isolated project copy, a unique VirtualBox name, and a temporary `VAGRANT_HOME`; it checks that Copilot opens in a pseudo-terminal before initialization, runs `copilot-init`, verifies the imported assets, and destroys the test VM.
+The smoke test uses an isolated project copy, a unique VirtualBox name, and a temporary `VAGRANT_HOME`; it checks that Copilot opens in a pseudo-terminal before initialization, runs `copilot-init`, verifies the marketplace registration and imported instructions/settings, and destroys the test VM.
 
 ## Copilot configuration
 
-Provisioning installs the system-wide `copilot-init` command but leaves the VM user's `~/.copilot` profile untouched. Run `copilot-init` inside the VM to import this repository's `.github/copilot-instructions.md` and skills containing `SKILL.md`, and to merge `provision/copilot-settings.json` into `~/.copilot/settings.json`. The managed settings select `gpt-6-luna` at `max` effort, hide the Gists tab, and enable every documented `footer.show*` status-line field (the CLI calls this display the footer). Each run reapplies those managed values while preserving unrelated preferences and conflicting user-owned instruction or skill targets. The instruction and skill links point directly into the mounted repository, so edits to existing assets are picked up without copying; re-running adds new skills and removes stale repository skill links. Restart the CLI to apply changed settings, or run `/skills reload` after changing skills in an active session.
+Provisioning installs the system-wide `copilot-init` command but leaves the VM user's `~/.copilot` profile untouched. Run `copilot-init` inside the VM to register `Ramzza/rmz-ai-marketplace`, link this repository's `.github/copilot-instructions.md`, and merge `provision/copilot-settings.json` into `~/.copilot/settings.json`. The managed settings select `gpt-6-luna` at `max` effort, hide the Gists tab, and enable every documented `footer.show*` status-line field (the CLI calls this display the footer). Each run reapplies those managed values, avoids duplicate marketplace registration, preserves unrelated preferences and conflicting user-owned instruction targets, and removes only stale skill symlinks from the VM repository's former `.github/skills/` directory. Marketplace plugins are not installed automatically; install the skill collection with `copilot plugin install rmz-ai-skills@rmz-ai-marketplace`.
 
-The repository bundles `convert-excel-to-md`, `convert-pdf-to-md`, `convert-word-to-md`, `md-to-docx`, and `pdftk-server` under `.github/skills/`, including their scripts, dependency manifests, and references. It also includes the upstream `playwright-explore-website` skill. The `pdftk-server` skill uses the `pdftk` package installed by provisioning. See `.github/skills/THIRD-PARTY-LICENSES.md` for upstream attribution.
+The `rmz-ai-skills` plugin in the marketplace contains all former VM skills, including the document/PDFtk, `playwright-explore-website`, and RMZ workflow skills with their scripts, references, and test instructions. Third-party attribution is preserved in the plugin's `THIRD-PARTY-LICENSES.md`. The `pdftk-server` skill uses the `pdftk` package installed by provisioning.
 
 ## Installed tooling
 

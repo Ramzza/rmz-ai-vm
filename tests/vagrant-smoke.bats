@@ -26,7 +26,6 @@ setup() {
   mkdir -p "${PROJECT_DIRECTORY}/.github"
   cp "${REPO_ROOT}/.github/copilot-instructions.md" \
     "${PROJECT_DIRECTORY}/.github/copilot-instructions.md"
-  cp -R "${REPO_ROOT}/.github/skills" "${PROJECT_DIRECTORY}/.github/skills"
 }
 
 teardown() {
@@ -153,11 +152,8 @@ copilot-init
 test -L "$HOME/.copilot/copilot-instructions.md"
 test "$(readlink -f "$HOME/.copilot/copilot-instructions.md")" = \
   "/workspace/rmz-ai-vm/.github/copilot-instructions.md"
-test -L "$HOME/.copilot/skills/rmz-test"
-test "$(readlink -f "$HOME/.copilot/skills/rmz-test")" = \
-  "/workspace/rmz-ai-vm/.github/skills/rmz-test"
-test -f "$HOME/.copilot/skills/rmz-test/SKILL.md"
-copilot skill list | grep -F 'rmz-test'
+test ! -e "$HOME/.copilot/skills"
+copilot plugin marketplace list | grep -F 'rmz-ai-marketplace'
 copilot --version
 jq -e '
   .model == "gpt-6-luna"

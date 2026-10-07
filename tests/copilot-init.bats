@@ -7,20 +7,48 @@ setup() {
   TEST_DIRECTORY="$(mktemp -d)"
   TEST_REPOSITORY="${TEST_DIRECTORY}/repo"
   TEST_HOME="${TEST_DIRECTORY}/home"
-  TEST_SKILLS_SOURCE="${TEST_REPOSITORY}/.github/skills"
   TEST_INSTRUCTIONS_SOURCE="${TEST_REPOSITORY}/.github/copilot-instructions.md"
+  TEST_BIN="${TEST_DIRECTORY}/bin"
+  COPILOT_MARKETPLACE_STATE="${TEST_DIRECTORY}/marketplace-registered"
+  COPILOT_COMMAND_LOG="${TEST_DIRECTORY}/copilot.log"
   mkdir -p \
     "${TEST_REPOSITORY}/provision" \
-    "${TEST_SKILLS_SOURCE}/rmz-test" \
-    "${TEST_SKILLS_SOURCE}/notes" \
-    "${TEST_HOME}"
+    "${TEST_REPOSITORY}/.github" \
+    "${TEST_REPOSITORY}/.github/skills" \
+    "${TEST_HOME}" \
+    "${TEST_BIN}"
+  : >"${COPILOT_COMMAND_LOG}"
   if [[ -f "${COPILOT_INIT_SOURCE}" ]]; then
     cp "${COPILOT_INIT_SOURCE}" "${TEST_REPOSITORY}/provision/copilot-init.sh"
   fi
   cp "${COPILOT_SETTINGS_SOURCE}" \
     "${TEST_REPOSITORY}/provision/copilot-settings.json"
   printf '%s\n' 'Test-only Copilot instructions' >"${TEST_INSTRUCTIONS_SOURCE}"
-  printf '%s\n' 'name: rmz-test' >"${TEST_SKILLS_SOURCE}/rmz-test/SKILL.md"
+  cat >"${TEST_BIN}/copilot" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$1 $2 $3" == "plugin marketplace list" ]]; then
+  if [[ "${COPILOT_LIST_STATUS:-0}" -ne 0 ]]; then
+    printf '%s\n' 'Simulated marketplace list failure' >&2
+    false
+  fi
+  if [[ -f "${COPILOT_MARKETPLACE_STATE}" ]]; then
+    printf '%s\n' 'rmz-ai-marketplace'
+  fi
+elif [[ "$1 $2 $3" == "plugin marketplace add" ]]; then
+  if [[ "${COPILOT_ADD_STATUS:-0}" -ne 0 ]]; then
+    printf '%s\n' 'Simulated marketplace add failure' >&2
+    false
+  fi
+  [[ "$4" == "Ramzza/rmz-ai-marketplace" ]]
+  printf '%s\n' "$*" >>"${COPILOT_COMMAND_LOG}"
+  touch "${COPILOT_MARKETPLACE_STATE}"
+else
+  printf 'Unexpected Copilot command: %s\n' "$*" >&2
+  false
+fi
+EOF
+  chmod +x "${TEST_BIN}/copilot"
 }
 
 teardown() {
@@ -28,7 +56,14 @@ teardown() {
 }
 
 run_init() {
-  env HOME="${TEST_HOME}" bash "${TEST_REPOSITORY}/provision/copilot-init.sh"
+  env \
+    HOME="${TEST_HOME}" \
+    PATH="${TEST_BIN}:${PATH}" \
+    COPILOT_MARKETPLACE_STATE="${COPILOT_MARKETPLACE_STATE}" \
+    COPILOT_COMMAND_LOG="${COPILOT_COMMAND_LOG}" \
+    COPILOT_LIST_STATUS="${COPILOT_LIST_STATUS:-0}" \
+    COPILOT_ADD_STATUS="${COPILOT_ADD_STATUS:-0}" \
+    bash "${TEST_REPOSITORY}/provision/copilot-init.sh"
 }
 
 assert_managed_settings() {
@@ -62,7 +97,7 @@ assert_managed_settings() {
   [ -f "${COPILOT_INIT_SOURCE}" ]
 }
 
-@test "PRD-004: links repository instructions and skills idempotently" {
+@test "PRD-004: registers the marketplace and links instructions idempotently" {
   mkdir -p "${TEST_HOME}/.copilot"
   printf '{"theme":"dim","model":"user-model","effortLevel":"low","tabs":{"sort":["issues"],"hide":["issues"]},"footer":{"showBranch":false}}\n' \
     >"${TEST_HOME}/.copilot/settings.json"
@@ -74,11 +109,10 @@ assert_managed_settings() {
   run readlink -f "${TEST_HOME}/.copilot/copilot-instructions.md"
   [ "${status}" -eq 0 ]
   [ "${output}" = "${TEST_INSTRUCTIONS_SOURCE}" ]
-  [ -L "${TEST_HOME}/.copilot/skills/rmz-test" ]
-  run readlink -f "${TEST_HOME}/.copilot/skills/rmz-test"
-  [ "${status}" -eq 0 ]
-  [ "${output}" = "${TEST_SKILLS_SOURCE}/rmz-test" ]
-  [ -f "${TEST_HOME}/.copilot/skills/rmz-test/SKILL.md" ]
+  [ "$(wc -l <"${COPILOT_COMMAND_LOG}")" -eq 1 ]
+  grep -Fqx 'plugin marketplace add Ramzza/rmz-ai-marketplace' \
+    "${COPILOT_COMMAND_LOG}"
+  [ ! -e "${TEST_HOME}/.copilot/skills" ]
   run assert_managed_settings "${TEST_HOME}/.copilot/settings.json" \
     '["issues","gists"]'
   [ "${status}" -eq 0 ]
@@ -93,6 +127,7 @@ assert_managed_settings() {
   run cmp "${TEST_DIRECTORY}/settings-after.json" \
     "${TEST_HOME}/.copilot/settings.json"
   [ "${status}" -eq 0 ]
+  [ "$(wc -l <"${COPILOT_COMMAND_LOG}")" -eq 1 ]
 }
 
 @test "PRD-004: creates managed settings when no user settings exist" {
@@ -103,29 +138,39 @@ assert_managed_settings() {
   [ "${status}" -eq 0 ]
 }
 
-@test "PRD-004: reconciles added and removed repository skills" {
+@test "PRD-004: reports marketplace lookup and registration failures" {
+  COPILOT_LIST_STATUS=1
   run run_init
-  [ "${status}" -eq 0 ]
+  unset COPILOT_LIST_STATUS
 
-  printf '%s\n' 'Updated instructions' >"${TEST_INSTRUCTIONS_SOURCE}"
-  mkdir -p "${TEST_SKILLS_SOURCE}/rmz-new"
-  printf '%s\n' 'name: rmz-new' >"${TEST_SKILLS_SOURCE}/rmz-new/SKILL.md"
-  rm -- "${TEST_SKILLS_SOURCE}/rmz-test/SKILL.md"
-  rmdir -- "${TEST_SKILLS_SOURCE}/rmz-test"
+  [ "${status}" -ne 0 ]
+  [[ "${output}" == *"Could not list Copilot plugin marketplaces"* ]]
+  [[ "${output}" == *"Simulated marketplace list failure"* ]]
+  [ ! -e "${TEST_HOME}/.copilot" ]
+
+  COPILOT_ADD_STATUS=1
+  run run_init
+  unset COPILOT_ADD_STATUS
+
+  [ "${status}" -ne 0 ]
+  [[ "${output}" == *"Could not add Copilot plugin marketplace"* ]]
+  [[ "${output}" == *"Simulated marketplace add failure"* ]]
+  [ ! -e "${TEST_HOME}/.copilot" ]
+}
+
+@test "PRD-009: removes stale repository skill links and preserves user skills" {
+  old_skill_target="${TEST_REPOSITORY}/.github/skills/rmz-test"
+  mkdir -p "${TEST_HOME}/.copilot/skills/user-skill"
+  ln -s "${old_skill_target}" "${TEST_HOME}/.copilot/skills/rmz-test"
+  printf '%s\n' 'User-owned skill' \
+    >"${TEST_HOME}/.copilot/skills/user-skill/SKILL.md"
 
   run run_init
 
   [ "${status}" -eq 0 ]
-  run cmp "${TEST_INSTRUCTIONS_SOURCE}" \
-    "${TEST_HOME}/.copilot/copilot-instructions.md"
-  [ "${status}" -eq 0 ]
-  [ ! -e "${TEST_HOME}/.copilot/skills/rmz-test" ]
-  [ -L "${TEST_HOME}/.copilot/skills/rmz-new" ]
-  run readlink -f "${TEST_HOME}/.copilot/skills/rmz-new"
-  [ "${status}" -eq 0 ]
-  [ "${output}" = "${TEST_SKILLS_SOURCE}/rmz-new" ]
-  run assert_managed_settings "${TEST_HOME}/.copilot/settings.json" '["gists"]'
-  [ "${status}" -eq 0 ]
+  [ ! -L "${TEST_HOME}/.copilot/skills/rmz-test" ]
+  [ -f "${TEST_HOME}/.copilot/skills/user-skill/SKILL.md" ]
+  [ "$(wc -l <"${COPILOT_COMMAND_LOG}")" -eq 1 ]
 }
 
 @test "PRD-004: preserves unrelated preferences and conflicting targets" {
@@ -172,6 +217,7 @@ assert_managed_settings() {
   [ "${status}" -eq 0 ]
   [ ! -e "${TEST_HOME}/.copilot/skills" ]
   [ ! -e "${TEST_HOME}/.copilot/copilot-instructions.md" ]
+  [ "$(wc -l <"${COPILOT_COMMAND_LOG}")" -eq 0 ]
 }
 
 @test "PRD-004: rejects missing repository Copilot assets" {
@@ -184,69 +230,25 @@ assert_managed_settings() {
   [ ! -e "${TEST_HOME}/.copilot/skills" ]
 }
 
-@test "PRD-009: links bundled non-rmz skills and their resources" {
-  run env HOME="${TEST_HOME}" bash "${COPILOT_INIT_SOURCE}"
+@test "PRD-009: registers the marketplace instead of copying marketplace skills" {
+  run run_init
 
   [ "${status}" -eq 0 ]
-  for skill_name in \
-    convert-excel-to-md \
-    convert-pdf-to-md \
-    convert-word-to-md \
-    md-to-docx \
-    pdftk-server; do
-    skill_source="${REPO_ROOT}/.github/skills/${skill_name}"
-    skill_target="${TEST_HOME}/.copilot/skills/${skill_name}"
-
-    [ -f "${skill_source}/SKILL.md" ]
-    [ -L "${skill_target}" ]
-    run readlink -f -- "${skill_target}"
-    [ "${status}" -eq 0 ]
-    [ "${output}" = "${skill_source}" ]
-    run grep -Fqx "name: ${skill_name}" "${skill_source}/SKILL.md"
-    [ "${status}" -eq 0 ]
-  done
-
-  for resource in \
-    convert-excel-to-md/references/setup.md \
-    convert-excel-to-md/scripts/convert_excel_to_md.py \
-    convert-excel-to-md/scripts/requirements.txt \
-    convert-pdf-to-md/references/setup.md \
-    convert-pdf-to-md/scripts/convert_pdf_to_md.py \
-    convert-pdf-to-md/scripts/requirements.txt \
-    convert-word-to-md/references/setup.md \
-    convert-word-to-md/scripts/convert_word_to_md.py \
-    convert-word-to-md/scripts/requirements.txt \
-    md-to-docx/scripts/md-to-docx.mjs \
-    md-to-docx/scripts/package.json \
-    pdftk-server/references/download.md \
-    pdftk-server/references/pdftk-cli-examples.md \
-    pdftk-server/references/pdftk-man-page.md \
-    pdftk-server/references/pdftk-server-license.md \
-    pdftk-server/references/third-party-materials.md; do
-    [ -f "${TEST_HOME}/.copilot/skills/${resource}" ]
-  done
+  [ ! -e "${TEST_HOME}/.copilot/skills" ]
+  [ "$(wc -l <"${COPILOT_COMMAND_LOG}")" -eq 1 ]
+  grep -Fqx 'plugin marketplace add Ramzza/rmz-ai-marketplace' \
+    "${COPILOT_COMMAND_LOG}"
 }
 
-@test "PRD-010: links the Playwright website exploration skill" {
-  skill_name=playwright-explore-website
-  skill_source="${REPO_ROOT}/.github/skills/${skill_name}"
-  skill_target="${TEST_HOME}/.copilot/skills/${skill_name}"
+@test "PRD-010: documents the Playwright skill as a marketplace plugin" {
+  grep -Fq '`playwright-explore-website`' "${REPO_ROOT}/README.md"
+  grep -Fq 'copilot plugin install rmz-ai-skills@rmz-ai-marketplace' \
+    "${REPO_ROOT}/README.md"
 
-  run env HOME="${TEST_HOME}" bash "${COPILOT_INIT_SOURCE}"
+  run run_init
 
   [ "${status}" -eq 0 ]
-  [ -f "${skill_source}/SKILL.md" ]
-  [ -L "${skill_target}" ]
-  run readlink -f -- "${skill_target}"
-  [ "${status}" -eq 0 ]
-  [ "${output}" = "${skill_source}" ]
-  run grep -Fqx "name: ${skill_name}" "${skill_source}/SKILL.md"
-  [ "${status}" -eq 0 ]
-  run grep -Fqx '# Website Exploration for Testing' \
-    "${skill_source}/SKILL.md"
-  [ "${status}" -eq 0 ]
-  run grep -Fqx '6. Propose and generate test cases based on the exploration.' \
-    "${skill_source}/SKILL.md"
-  [ "${status}" -eq 0 ]
-  [ -f "${skill_target}/SKILL.md" ]
+  [ ! -e "${TEST_HOME}/.copilot/skills/playwright-explore-website" ]
+  grep -Fqx 'plugin marketplace add Ramzza/rmz-ai-marketplace' \
+    "${COPILOT_COMMAND_LOG}"
 }

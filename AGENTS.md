@@ -1,12 +1,12 @@
 # AGENTS.md
 
 ## Project context
-This repository builds a headless Ubuntu 22.04 development VM using Vagrant and VirtualBox; `Vagrantfile` mounts the parent projects folder at `/workspace`, `provision/` installs guest tools and `copilot-init`, `scripts/` provides host launchers, `.github/` holds canonical Copilot instructions and skills, and `tests/` covers shell, Vagrant, and Windows host behavior. See [ARCHITECTURE.md](ARCHITECTURE.md) and [PRD.md](PRD.md).
+This repository builds a headless Ubuntu 22.04 development VM using Vagrant and VirtualBox; `Vagrantfile` mounts the parent projects folder at `/workspace`, `provision/` installs guest tools and `copilot-init`, `scripts/` provides host launchers, `.github/` holds Copilot instructions, RMZ skills are distributed through `rmz-ai-marketplace`, and `tests/` covers shell, Vagrant, and Windows host behavior. See [ARCHITECTURE.md](ARCHITECTURE.md) and [PRD.md](PRD.md).
 
 ## Conventions
 - Keep VM resource defaults in `vm-config.json`; the Vagrant configuration also supports `VM_NAME`, `VM_CPUS`, and `VM_MEMORY_MB` overrides.
 - Use Bash for Linux provisioning and launchers, PowerShell for Windows host commands, and Ruby syntax in `Vagrantfile`.
-- Treat `.github/copilot-instructions.md` and `.github/skills/*/SKILL.md` as canonical workflow guidance; reuse existing scripts and helpers.
+- Treat `.github/copilot-instructions.md` as canonical repository guidance. The RMZ skill source is `Ramzza/rmz-ai-marketplace`'s `rmz-ai-skills` plugin; reuse its scripts and references rather than maintaining VM-local copies.
 
 ## Scripts
 - `bats tests` runs the Bats suite.
