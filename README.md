@@ -77,6 +77,12 @@ rmz-copilot
 
 The command runs on the host: it changes to this repository, runs `vagrant up`, and then runs `vagrant ssh` only if startup succeeds. The guest shell starts in `/workspace`, the mounted projects directory.
 
+After the first VM start, run `gh auth login` from the guest shell to authenticate the GitHub CLI:
+
+```sh
+gh auth login
+```
+
 ### Manual startup
 
 From this directory:
