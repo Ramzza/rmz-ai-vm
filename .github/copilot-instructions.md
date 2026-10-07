@@ -1,5 +1,6 @@
 Keep instructions concise, direct, and actionable. Avoid repetition and unnecessary explanation.
 Always check whether an rmz-* skill can be used for a given task or step before proceeding.
+RMZ skills are distributed in the `rmz-ai-skills` plugin from `rmz-ai-marketplace`; run `copilot-init` to register the marketplace, then install the plugin with `copilot plugin install rmz-ai-skills@rmz-ai-marketplace`.
 Work on a feature or bugfix branch created from origin/main; when the task is finished, commit, push, and open a PR.
 Use Conventional Commits: `type(scope): imperative summary` (for example, `fix(auth): reject expired tokens`); choose a fitting type such as `feat`, `fix`, `docs`, `refactor`, `test`, or `chore`.
 Every line of code must be covered by unit tests; add or update tests for any code change.

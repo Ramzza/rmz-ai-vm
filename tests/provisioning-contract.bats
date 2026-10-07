@@ -274,7 +274,7 @@ EOF
   [ "${repository_update_line}" -lt "${gh_install_line}" ]
 }
 
-@test "PRD-009: installs pdftk for the bundled PDFtk skill" {
+@test "PRD-009: installs pdftk for the marketplace PDFtk skill" {
   run run_bootstrap
 
   [ "${status}" -eq 0 ]
