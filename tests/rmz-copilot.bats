@@ -20,6 +20,7 @@ printf '%s|%s\n' "$*" "$PWD" >>"${VAGRANT_LOG}"
 case "${1:-}" in
   up) exit "${VAGRANT_UP_STATUS:-0}" ;;
   ssh) exit "${VAGRANT_SSH_STATUS:-0}" ;;
+  suspend) exit "${VAGRANT_SUSPEND_STATUS:-0}" ;;
   *) exit 99 ;;
 esac
 EOF
@@ -36,6 +37,30 @@ teardown() {
   [ "${status}" -eq 0 ]
   [ "$(cat "${VAGRANT_LOG}")" = "up|${REPO_ROOT}
 ssh|${REPO_ROOT}" ]
+}
+
+@test "PRD-005: suspends the VM without starting it when --off is provided" {
+  run bash "${LAUNCHER_PATH}" --off
+
+  [ "${status}" -eq 0 ]
+  [ "$(cat "${VAGRANT_LOG}")" = "suspend|${REPO_ROOT}" ]
+}
+
+@test "PRD-005: propagates a host vagrant suspend failure for --off" {
+  export VAGRANT_SUSPEND_STATUS=37
+
+  run bash "${LAUNCHER_PATH}" --off
+
+  [ "${status}" -eq 37 ]
+  [ "$(cat "${VAGRANT_LOG}")" = "suspend|${REPO_ROOT}" ]
+}
+
+@test "PRD-005: rejects unsupported arguments without invoking Vagrant" {
+  run bash "${LAUNCHER_PATH}" --off extra
+
+  [ "${status}" -ne 0 ]
+  [[ "${output}" == *"Usage:"* ]]
+  [ ! -s "${VAGRANT_LOG}" ]
 }
 
 @test "PRD-005: does not open SSH when host vagrant up fails" {
@@ -75,6 +100,17 @@ ssh|${REPO_ROOT}" ]
   [ "${status}" -eq 0 ]
   [ "$(cat "${VAGRANT_LOG}")" = "up|${REPO_ROOT}
 ssh|${REPO_ROOT}" ]
+}
+
+@test "PRD-005: forwards --off through the installed Bash command" {
+  run bash "${SETUP_SCRIPT_PATH}"
+  [ "${status}" -eq 0 ]
+
+  run bash -c \
+    'cd "$TEST_DIRECTORY"; source "$HOME/.bashrc"; rmz-copilot --off'
+
+  [ "${status}" -eq 0 ]
+  [ "$(cat "${VAGRANT_LOG}")" = "suspend|${REPO_ROOT}" ]
 }
 
 @test "PRD-005: creates the Bash profile when it does not exist" {

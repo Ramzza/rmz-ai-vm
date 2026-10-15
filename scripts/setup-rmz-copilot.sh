@@ -28,7 +28,7 @@ mkdir -p -- "${CONFIG_DIRECTORY}"
 printf -v QUOTED_LAUNCHER_PATH '%q' "${LAUNCHER_PATH}"
 cat >"${FUNCTION_FILE}" <<EOF
 rmz-copilot() {
-  bash ${QUOTED_LAUNCHER_PATH}
+  bash ${QUOTED_LAUNCHER_PATH} "\$@"
 }
 EOF
 

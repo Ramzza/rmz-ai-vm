@@ -33,7 +33,7 @@ $escapedLauncherPath = $launcherPath.Replace("'", "''")
 $managedBlock = @(
     $startMarker
     'function rmz-copilot {'
-    "    & '$escapedLauncherPath'"
+    "    & '$escapedLauncherPath' @args"
     '}'
     $endMarker
 ) -join [System.Environment]::NewLine
