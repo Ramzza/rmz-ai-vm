@@ -10,6 +10,7 @@ $initialLocation = Get-Location
 $global:VagrantCalls = [System.Collections.Generic.List[string]]::new()
 $global:VagrantUpExitCode = 0
 $global:VagrantSshExitCode = 0
+$global:VagrantSuspendExitCode = 0
 
 function Assert-True {
     param(
@@ -52,6 +53,9 @@ function vagrant {
     }
     elseif ($VagrantArguments[0] -eq 'ssh') {
         $global:LASTEXITCODE = $global:VagrantSshExitCode
+    }
+    elseif ($VagrantArguments[0] -eq 'suspend') {
+        $global:LASTEXITCODE = $global:VagrantSuspendExitCode
     }
     else {
         $global:LASTEXITCODE = 99
@@ -117,6 +121,53 @@ try {
             'The launcher must restore the caller location.'
         Assert-Equal '2' $global:VagrantCalls.Count.ToString() `
             'A successful launch must run exactly two Vagrant commands.'
+
+        $global:VagrantCalls.Clear()
+        rmz-copilot --off
+        Assert-Equal "suspend|$repoRoot" $global:VagrantCalls[0] `
+            'The --off option must suspend Vagrant from the repository root.'
+        Assert-Equal $tempDirectory (Get-Location).Path `
+            'The --off option must restore the caller location.'
+        Assert-Equal '1' $global:VagrantCalls.Count.ToString() `
+            'The --off option must run only vagrant suspend.'
+
+        $global:VagrantCalls.Clear()
+        $global:VagrantSuspendExitCode = 37
+        $suspendFailureThrown = $false
+        try {
+            rmz-copilot --off
+        }
+        catch {
+            $suspendFailureThrown = $true
+        }
+        Assert-True $suspendFailureThrown `
+            'The launcher must report a failed vagrant suspend.'
+        Assert-Equal '1' $global:VagrantCalls.Count.ToString() `
+            'A failed vagrant suspend must not run additional Vagrant commands.'
+        Assert-Equal "suspend|$repoRoot" $global:VagrantCalls[0] `
+            'A failed vagrant suspend must run from the repository root.'
+        Assert-Equal $tempDirectory (Get-Location).Path `
+            'The launcher must restore the caller location after suspend fails.'
+        $global:VagrantSuspendExitCode = 0
+
+        $global:VagrantCalls.Clear()
+        $invalidArgumentsThrown = $false
+        $invalidArgumentsMessage = ''
+        try {
+            rmz-copilot --off extra
+        }
+        catch {
+            $invalidArgumentsThrown = $true
+            $invalidArgumentsMessage = $_.Exception.Message
+        }
+        Assert-True $invalidArgumentsThrown `
+            'The launcher must reject unsupported arguments.'
+        Assert-True ($invalidArgumentsMessage.Contains('Usage: rmz-copilot [--off]')) `
+            'The launcher must explain the supported arguments.'
+        Assert-Equal '0' $global:VagrantCalls.Count.ToString() `
+            'Unsupported arguments must not invoke Vagrant.'
+        Assert-Equal $tempDirectory (Get-Location).Path `
+            'The launcher must preserve the caller location for invalid arguments.'
 
         $global:VagrantCalls.Clear()
         $global:VagrantUpExitCode = 41
