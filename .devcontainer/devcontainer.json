@@ -1,0 +1,8 @@
+{
+  "name": "RMZ Development Container",
+  "dockerComposeFile": "compose.yaml",
+  "service": "workspace",
+  "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
+  "remoteUser": "vscode",
+  "shutdownAction": "none"
+}
