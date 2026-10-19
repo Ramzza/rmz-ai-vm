@@ -241,6 +241,7 @@ try {
     }
 }
 finally {
+    $global:LASTEXITCODE = 0
     Set-Location -LiteralPath $initialLocation.Path
     if (Test-Path -LiteralPath $tempDirectory) {
         Remove-Item -LiteralPath $tempDirectory -Recurse -Force
