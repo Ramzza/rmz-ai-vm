@@ -6,10 +6,10 @@ $composeFile = Join-Path $composeDirectory 'compose.yaml'
 $workspaceFolder = "/workspace/$([System.IO.Path]::GetFileName($repoRoot))"
 
 $recreateRequested = $args.Count -eq 1 -and $args[0] -ceq '--recreate'
-$offRequested = $args.Count -eq 1 -and $args[0] -ceq '--off'
+$stopRequested = $args.Count -eq 1 -and $args[0] -ceq '--stop'
 $downRequested = $args.Count -eq 1 -and $args[0] -ceq '--down'
-if ($args.Count -gt 0 -and -not ($recreateRequested -or $offRequested -or $downRequested)) {
-    throw 'Usage: rmz-container [--recreate | --off | --down]'
+if ($args.Count -gt 0 -and -not ($recreateRequested -or $stopRequested -or $downRequested)) {
+    throw 'Usage: rmz-container [--recreate | --stop | --down]'
 }
 if (-not (Test-Path -LiteralPath $composeFile -PathType Leaf)) {
     throw "Docker Compose configuration was not found at '$composeFile'."
@@ -25,7 +25,7 @@ $composePrefix = @(
 
 Push-Location -LiteralPath $repoRoot
 try {
-    if ($offRequested) {
+    if ($stopRequested) {
         $dockerArguments = $composePrefix + @('stop')
         & docker @dockerArguments
         $stopExitCode = $LASTEXITCODE

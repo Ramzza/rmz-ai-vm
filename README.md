@@ -95,11 +95,11 @@ Open a new PowerShell session, then run:
 rmz-container
 ```
 
-The command creates or starts the container and opens an interactive Bash shell in this repository. Use `--recreate` to rebuild and recreate it, `--off` to stop it, or `--down` to stop and remove it:
+The command can be run from any working directory; it creates or starts the container and opens an interactive Bash shell in this repository. Use `--recreate` to rebuild and recreate it, `--stop` to stop it, or `--down` to stop and remove it:
 
 ```powershell
 rmz-container --recreate
-rmz-container --off
+rmz-container --stop
 rmz-container --down
 ```
 

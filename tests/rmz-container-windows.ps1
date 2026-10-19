@@ -7,6 +7,7 @@ $tempDirectory = Join-Path ([System.IO.Path]::GetTempPath()) (
     'rmz-container-tests-' + [System.Guid]::NewGuid().ToString('N')
 )
 $profilePath = Join-Path $tempDirectory 'Microsoft.PowerShell_profile.ps1'
+$workingDirectory = Join-Path $tempDirectory 'working directory outside repository'
 $initialLocation = Get-Location
 $devcontainerDirectory = Join-Path $repoRoot '.devcontainer'
 $composeFile = Join-Path $devcontainerDirectory 'compose.yaml'
@@ -71,6 +72,7 @@ function docker {
 
 try {
     New-Item -ItemType Directory -Path $tempDirectory | Out-Null
+    New-Item -ItemType Directory -Path $workingDirectory | Out-Null
     [System.IO.File]::WriteAllText(
         $profilePath,
         "# existing profile setting`r`n",
@@ -118,18 +120,18 @@ try {
         'The setup script must preserve a profile with an incomplete block.'
 
     . $profilePath
-    Push-Location -LiteralPath $tempDirectory
+    Push-Location -LiteralPath $workingDirectory
     try {
         rmz-container
         Assert-Equal "$composePrefix up --detach|$repoRoot" $global:DockerCalls[0] `
-            'The default command must create or start the container from the repository.'
+            'PRD-011: The command must start the container from outside the repository.'
         Assert-Equal (
             "$composePrefix exec --interactive --tty --workdir $workspaceFolder workspace /bin/bash|$repoRoot"
         ) $global:DockerCalls[1] `
             'The default command must open an interactive shell in this repository.'
         Assert-Equal '2' $global:DockerCalls.Count.ToString() `
             'A successful launch must run exactly two Docker commands.'
-        Assert-Equal $tempDirectory (Get-Location).Path `
+        Assert-Equal $workingDirectory (Get-Location).Path `
             'The launcher must restore the caller location.'
 
         $global:DockerCalls.Clear()
@@ -146,11 +148,11 @@ try {
             'The --recreate option must run exactly two Docker commands.'
 
         $global:DockerCalls.Clear()
-        rmz-container --off
+        rmz-container --stop
         Assert-Equal "$composePrefix stop|$repoRoot" $global:DockerCalls[0] `
-            'The --off option must stop the container from the repository.'
+            'PRD-011: The --stop option must stop the container from the repository.'
         Assert-Equal '1' $global:DockerCalls.Count.ToString() `
-            'The --off option must not open a shell.'
+            'The --stop option must not open a shell.'
 
         $global:DockerCalls.Clear()
         rmz-container --down
@@ -172,7 +174,7 @@ try {
             'The launcher must report a failed container start.'
         Assert-Equal '1' $global:DockerCalls.Count.ToString() `
             'A failed container start must not open a shell.'
-        Assert-Equal $tempDirectory (Get-Location).Path `
+        Assert-Equal $workingDirectory (Get-Location).Path `
             'The launcher must restore the caller location after startup fails.'
         $global:DockerUpExitCode = 0
 
@@ -180,7 +182,7 @@ try {
         $global:DockerStopExitCode = 41
         $stopFailureThrown = $false
         try {
-            rmz-container --off
+            rmz-container --stop
         }
         catch {
             $stopFailureThrown = $true
@@ -214,6 +216,24 @@ try {
         $global:DockerExecExitCode = 0
 
         $global:DockerCalls.Clear()
+        $legacyOptionThrown = $false
+        $legacyOptionMessage = ''
+        try {
+            rmz-container --off
+        }
+        catch {
+            $legacyOptionThrown = $true
+            $legacyOptionMessage = $_.Exception.Message
+        }
+        Assert-True $legacyOptionThrown `
+            'PRD-011: The removed --off option must be rejected.'
+        Assert-Equal 'Usage: rmz-container [--recreate | --stop | --down]' `
+            $legacyOptionMessage `
+            'The usage text must list --stop instead of --off.'
+        Assert-Equal '0' $global:DockerCalls.Count.ToString() `
+            'The removed --off option must not run Docker.'
+
+        $global:DockerCalls.Clear()
         $invalidOptionThrown = $false
         try {
             rmz-container --unknown
@@ -228,7 +248,7 @@ try {
 
         $multipleOptionsThrown = $false
         try {
-            rmz-container --off --down
+            rmz-container --stop --down
         }
         catch {
             $multipleOptionsThrown = $true
