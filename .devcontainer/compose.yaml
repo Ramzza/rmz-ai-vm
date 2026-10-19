@@ -1,0 +1,13 @@
+services:
+  workspace:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    command: sleep infinity
+    init: true
+    stdin_open: true
+    tty: true
+    volumes:
+      - type: bind
+        source: ../..
+        target: /workspace

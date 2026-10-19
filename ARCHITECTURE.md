@@ -1,6 +1,6 @@
 # Architecture
 
-This repository defines a reproducible Ubuntu development VM. Vagrant configures VirtualBox; host-side repository files remain the source of truth and are mounted into the guest.
+This repository defines a reproducible Ubuntu development VM and an optional Docker devcontainer. Vagrant configures VirtualBox; both environments mount host-side project files so they remain the source of truth.
 
 ## Components and provisioning
 
@@ -10,6 +10,8 @@ This repository defines a reproducible Ubuntu development VM. Vagrant configures
 - `Vagrantfile` passes the mounted repository's `provision/copilot-init.sh` path to the root provisioner. `bootstrap.sh` installs an executable `copilot-init` wrapper beside the Copilot CLI without running it or modifying the guest user's profile.
 - `provision/copilot-init.sh` runs manually as the guest user. It derives the repository root from its script path, registers `Ramzza/rmz-ai-marketplace` if it is not already registered, merges `provision/copilot-settings.json` into `~/.copilot/settings.json`, and links repository instructions into `~/.copilot`. Repeat runs reapply managed settings, avoid duplicate marketplace registration, and remove stale links into the former repository skill directory while preserving unrelated preferences and conflicting targets.
 - `scripts/rmz-copilot.sh` and `scripts/rmz-copilot.ps1` run on the host, resolve the repository root, and start Vagrant before opening SSH. Their setup scripts register the `rmz-copilot` function in the user's Bash/Zsh or PowerShell profile.
+- `.devcontainer/devcontainer.json`, `compose.yaml`, and `Dockerfile` configure a Linux development container with Node.js v22, Python 3.15, and GitHub Copilot CLI. Compose bind-mounts the host directory containing this repository's parent at `/workspace`; the workspace is the repository's subdirectory there.
+- `scripts/rmz-container.ps1` resolves the repository and Compose file relative to the script, so the installed command works from any working directory. It uses Docker Compose to create or start the devcontainer and open an interactive shell. Its `--recreate`, `--stop`, and `--down` options rebuild/recreate, stop, or stop/remove the container; `scripts/setup-rmz-container.ps1` installs the command in the Windows PowerShell profile.
 - `.github/copilot-instructions.md` and `provision/copilot-settings.json` are canonical VM repository assets. Skills are distributed by the `rmz-ai-skills` plugin in `Ramzza/rmz-ai-marketplace` and are installed separately through Copilot CLI; `copilot-init` does not copy or install skills.
 
 ## Lifecycle and data flow
@@ -18,6 +20,8 @@ This repository defines a reproducible Ubuntu development VM. Vagrant configures
 
 `vagrant provision` or `vagrant up --provision` reapplies setup after provisioning changes. The VM defaults to 4 CPUs and 8192 MB of memory as defined in `vm-config.json`; the `VM_NAME`, `VM_CPUS`, and `VM_MEMORY_MB` environment variables override their respective values.
 
+The devcontainer uses Docker Compose to build and start its container, then the Windows `rmz-container` command opens a shell in `/workspace/<repository-folder>`, regardless of the caller's working directory. `--recreate` rebuilds the image and forces container recreation; `--stop` stops the service, and `--down` removes it after stopping.
+
 ## Validation
 
-The shell configuration tests run with `bats tests`; the GitHub Actions workflow runs the repository checks.
+The shell and devcontainer contract tests run with `bats tests`; the GitHub Actions workflow also runs the PowerShell host-command tests on Windows.

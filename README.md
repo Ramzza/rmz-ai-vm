@@ -1,6 +1,6 @@
 # Copilot CLI Ubuntu VM
 
-This is a small, reproducible Ubuntu 22.04 development VM for GitHub Copilot CLI. It uses [Vagrant](https://www.vagrantup.com/) with VirtualBox and mounts the parent projects directory at `/workspace`.
+This repository provides a reproducible Ubuntu 22.04 development VM and an optional Docker devcontainer for GitHub Copilot CLI. Both mount the parent projects directory at `/workspace`.
 
 Business requirements are defined in [`PRD.md`](PRD.md), with every requirement mapped to automated tests.
 
@@ -8,6 +8,7 @@ Business requirements are defined in [`PRD.md`](PRD.md), with every requirement 
 
 - Vagrant
 - VirtualBox
+- Docker Desktop with Compose v2 (Windows 11) or Docker Engine with the Compose plugin (Ubuntu) for the devcontainer
 - Hardware virtualization enabled in firmware
 - At least 16 GB of host RAM is recommended, with 8 GB available for the VM
 
@@ -44,6 +45,65 @@ Then download and install the current `vagrant_*.deb` for your architecture. Log
 ```bash
 sudo usermod -aG vboxusers "$USER"
 ```
+
+### Docker installation for the devcontainer
+
+On Windows 11, install Docker Desktop from an elevated PowerShell:
+
+```powershell
+winget install --id Docker.DockerDesktop --exact --accept-source-agreements --accept-package-agreements
+```
+
+Start Docker Desktop and use its WSL 2 Linux engine. Verify Docker Compose is available:
+
+```powershell
+docker compose version
+```
+
+On Ubuntu, install Docker Engine from Docker's official APT repository, including the Compose plugin:
+
+```bash
+sudo apt update
+sudo apt install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" |
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo usermod -aG docker "$USER"
+```
+
+Log out and back in for the Docker group change to take effect. Membership in the `docker` group grants root-equivalent privileges.
+
+## Use the devcontainer
+
+The `.devcontainer` directory configures a Linux container with Copilot CLI, Node.js v22, and Python 3.15. It mounts the parent of this repository at `/workspace`, so this repository and sibling projects are available in the container.
+
+On Windows, run the setup script once from this repository to add `rmz-container` to your PowerShell profile:
+
+```powershell
+.\scripts\setup-rmz-container.ps1
+```
+
+Open a new PowerShell session, then run:
+
+```powershell
+rmz-container
+```
+
+The command can be run from any working directory; it creates or starts the container and opens an interactive Bash shell in this repository. Use `--recreate` to rebuild and recreate it, `--stop` to stop it, or `--down` to stop and remove it:
+
+```powershell
+rmz-container --recreate
+rmz-container --stop
+rmz-container --down
+```
+
+The same configuration can be opened with the VS Code Dev Containers extension.
 
 ## Create and use the VM
 
@@ -168,6 +228,13 @@ RUN_VAGRANT_SMOKE=1 bats tests/vagrant-smoke.bats
 ```
 
 The smoke test uses an isolated project copy, a unique VirtualBox name, and a temporary `VAGRANT_HOME`; it checks that Copilot opens in a pseudo-terminal before initialization, runs `copilot-init`, verifies the marketplace registration and imported instructions/settings, and destroys the test VM.
+
+On Windows, run the PowerShell host-command tests with:
+
+```powershell
+.\tests\rmz-copilot-windows.ps1
+.\tests\rmz-container-windows.ps1
+```
 
 ## Copilot configuration
 

@@ -26,6 +26,7 @@ jobs:
         run: |
           bash -n provision/bootstrap.sh scripts/rmz-copilot.sh scripts/setup-rmz-copilot.sh tests/shell-line-endings.sh
           ruby -c Vagrantfile
+          docker compose --project-name rmz-container --file .devcontainer/compose.yaml config --quiet
 
       - name: Test
         run: |
@@ -40,3 +41,7 @@ jobs:
       - name: Test PowerShell host command
         shell: pwsh
         run: ./tests/rmz-copilot-windows.ps1
+
+      - name: Test PowerShell container command
+        shell: pwsh
+        run: ./tests/rmz-container-windows.ps1
