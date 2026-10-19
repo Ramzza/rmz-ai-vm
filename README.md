@@ -83,6 +83,8 @@ Log out and back in for the Docker group change to take effect. Membership in th
 
 The `.devcontainer` directory configures a Linux container with Copilot CLI, Node.js v22, and Python 3.15. It mounts the parent of this repository at `/workspace`, so this repository and sibling projects are available in the container.
 
+Copilot CLI `/login` credentials use the container's GNOME Keyring and persist in a Docker volume across container stop, recreation, and removal. For headless startup, the keyring is automatically created and unlocked with an empty passphrase; the volume is not protected by a keyring password, and anyone with access to Docker can access its contents.
+
 On Windows, run the setup script once from this repository to add `rmz-container` to your PowerShell profile:
 
 ```powershell
