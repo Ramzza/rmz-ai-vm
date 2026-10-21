@@ -69,8 +69,10 @@ SH
   cat >"${stub_directory}/gnome-keyring-daemon" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
-keyring_input="$(cat)"
-[[ -z "${keyring_input}" ]]
+if [[ "$*" == "--unlock" ]]; then
+  keyring_input="$(cat)"
+  [[ -z "${keyring_input}" ]]
+fi
 printf 'gnome-keyring-daemon %s\n' "$*" >>"${KEYRING_CALL_LOG}"
 SH
   chmod +x "${stub_directory}/dbus-daemon" "${stub_directory}/gnome-keyring-daemon"
@@ -88,8 +90,9 @@ SH
   [ ! -e "${runtime_directory}/keyring" ]
   [ ! -e "${bus_socket}" ]
   [ "$(sed -n '1p' "${call_log}")" = "dbus-daemon --session --address=unix:path=${bus_socket} --fork --nopidfile" ]
-  [ "$(sed -n '2p' "${call_log}")" = "gnome-keyring-daemon --start --components=secrets --unlock" ]
-  [ "$(wc -l <"${call_log}")" -eq 2 ]
+  [ "$(sed -n '2p' "${call_log}")" = "gnome-keyring-daemon --start --components=secrets" ]
+  [ "$(sed -n '3p' "${call_log}")" = "gnome-keyring-daemon --unlock" ]
+  [ "$(wc -l <"${call_log}")" -eq 3 ]
 }
 
 @test "PRD-011: README documents Docker installation on Windows and Ubuntu" {
