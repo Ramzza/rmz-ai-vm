@@ -4,6 +4,9 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile
     command: sleep infinity
+    environment:
+      DBUS_SESSION_BUS_ADDRESS: "unix:path=/tmp/copilot-keyring-bus"
+      XDG_RUNTIME_DIR: /tmp/copilot-keyring-runtime
     init: true
     stdin_open: true
     tty: true
@@ -11,3 +14,9 @@ services:
       - type: bind
         source: ../..
         target: /workspace
+      - type: volume
+        source: copilot-keyring
+        target: /home/vscode/.local/share/keyrings
+
+volumes:
+  copilot-keyring:
