@@ -15,6 +15,7 @@ $workspaceFolder = "/workspace/$([System.IO.Path]::GetFileName($repoRoot))"
 $composePrefix = "compose --project-name rmz-container --file $composeFile"
 $global:DockerCalls = [System.Collections.Generic.List[string]]::new()
 $global:DockerUpExitCode = 0
+$global:DockerInitExitCode = 0
 $global:DockerExecExitCode = 0
 $global:DockerStopExitCode = 0
 $global:DockerDownExitCode = 0
@@ -56,7 +57,10 @@ function docker {
         "$($DockerArguments -join ' ')|$((Get-Location).Path)"
     )
     $global:LASTEXITCODE = 0
-    if ($DockerArguments -contains 'up') {
+    if ($DockerArguments -contains 'provision/copilot-init.sh') {
+        $global:LASTEXITCODE = $global:DockerInitExitCode
+    }
+    elseif ($DockerArguments -contains 'up') {
         $global:LASTEXITCODE = $global:DockerUpExitCode
     }
     elseif ($DockerArguments -contains 'exec') {
@@ -126,11 +130,15 @@ try {
         Assert-Equal "$composePrefix up --detach|$repoRoot" $global:DockerCalls[0] `
             'PRD-011: The command must start the container from outside the repository.'
         Assert-Equal (
-            "$composePrefix exec --interactive --tty --workdir $workspaceFolder workspace /bin/bash|$repoRoot"
+            "$composePrefix exec -T --workdir $workspaceFolder workspace bash provision/copilot-init.sh|$repoRoot"
         ) $global:DockerCalls[1] `
+            'PRD-011: The command must initialize Copilot before opening the shell.'
+        Assert-Equal (
+            "$composePrefix exec --interactive --tty --workdir $workspaceFolder workspace /bin/bash|$repoRoot"
+        ) $global:DockerCalls[2] `
             'The default command must open an interactive shell in this repository.'
-        Assert-Equal '2' $global:DockerCalls.Count.ToString() `
-            'A successful launch must run exactly two Docker commands.'
+        Assert-Equal '3' $global:DockerCalls.Count.ToString() `
+            'A successful launch must start, initialize, and open the container.'
         Assert-Equal $workingDirectory (Get-Location).Path `
             'The launcher must restore the caller location.'
 
@@ -141,11 +149,15 @@ try {
         ) $global:DockerCalls[0] `
             'The --recreate option must rebuild and recreate the container.'
         Assert-Equal (
-            "$composePrefix exec --interactive --tty --workdir $workspaceFolder workspace /bin/bash|$repoRoot"
+            "$composePrefix exec -T --workdir $workspaceFolder workspace bash provision/copilot-init.sh|$repoRoot"
         ) $global:DockerCalls[1] `
+            'PRD-011: The --recreate option must initialize Copilot before opening the shell.'
+        Assert-Equal (
+            "$composePrefix exec --interactive --tty --workdir $workspaceFolder workspace /bin/bash|$repoRoot"
+        ) $global:DockerCalls[2] `
             'The --recreate option must open an interactive shell after creation.'
-        Assert-Equal '2' $global:DockerCalls.Count.ToString() `
-            'The --recreate option must run exactly two Docker commands.'
+        Assert-Equal '3' $global:DockerCalls.Count.ToString() `
+            'The --recreate option must start, initialize, and open the container.'
 
         $global:DockerCalls.Clear()
         rmz-container --stop
@@ -177,6 +189,21 @@ try {
         Assert-Equal $workingDirectory (Get-Location).Path `
             'The launcher must restore the caller location after startup fails.'
         $global:DockerUpExitCode = 0
+
+        $global:DockerCalls.Clear()
+        $global:DockerInitExitCode = 31
+        $initFailureThrown = $false
+        try {
+            rmz-container
+        }
+        catch {
+            $initFailureThrown = $true
+        }
+        Assert-True $initFailureThrown `
+            'The launcher must report failed Copilot initialization.'
+        Assert-Equal '2' $global:DockerCalls.Count.ToString() `
+            'A failed Copilot initialization must not open an interactive shell.'
+        $global:DockerInitExitCode = 0
 
         $global:DockerCalls.Clear()
         $global:DockerStopExitCode = 41
@@ -211,7 +238,7 @@ try {
         $global:DockerCalls.Clear()
         $global:DockerExecExitCode = 29
         rmz-container
-        Assert-Equal '2' $global:DockerCalls.Count.ToString() `
+        Assert-Equal '3' $global:DockerCalls.Count.ToString() `
             'The launcher must not treat an interactive shell exit as a startup failure.'
         $global:DockerExecExitCode = 0
 

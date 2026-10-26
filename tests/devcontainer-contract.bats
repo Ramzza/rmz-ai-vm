@@ -4,9 +4,17 @@ setup() {
   REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
   DEVCONTAINER_DIRECTORY="${REPO_ROOT}/.devcontainer"
   TEST_TMP_DIR="$(mktemp -d)"
+  COMPOSE_PROJECT_STARTED=0
+  COMPOSE_PROJECT_NAME=""
 }
 
 teardown() {
+  if [[ "${COMPOSE_PROJECT_STARTED:-0}" == "1" ]]; then
+    docker compose \
+      --project-name "${COMPOSE_PROJECT_NAME}" \
+      --file "${DEVCONTAINER_DIRECTORY}/compose.yaml" \
+      down --volumes --remove-orphans
+  fi
   rm -rf -- "${TEST_TMP_DIR}"
 }
 
@@ -25,7 +33,7 @@ teardown() {
     service = compose.fetch("services").fetch("workspace")
     workspace_mount = service.fetch("volumes").find { |volume| volume["target"] == "/workspace" }
     keyring_mount = service.fetch("volumes").find { |volume| volume["target"] == "/home/vscode/.local/share/keyrings" }
-    keyring_packages = %w[dbus gnome-keyring libsecret-1-0]
+    keyring_packages = %w[dbus gnome-keyring libsecret-1-0 libsecret-tools]
 
     raise "Devcontainer must use the Compose configuration" unless config["dockerComposeFile"] == "compose.yaml"
     raise "Devcontainer must use the workspace service" unless config["service"] == "workspace"
@@ -38,7 +46,7 @@ teardown() {
     raise "Container must install the nodejs package" unless dockerfile.include?("apt-get install --yes --no-install-recommends nodejs")
     raise "Container must install Copilot CLI with the official installer" unless dockerfile.include?("https://gh.io/copilot-install")
     raise "Container must run as vscode" unless dockerfile.match?(/^USER vscode$/)
-    raise "Container must install D-Bus, GNOME Keyring, and libsecret" unless keyring_packages.all? { |package| dockerfile.include?(package) }
+    raise "Container must install D-Bus, GNOME Keyring, and libsecret tools" unless keyring_packages.all? { |package| dockerfile.include?(package) }
     raise "Container must copy the keyring entrypoint" unless dockerfile.include?("COPY .devcontainer/keyring-entrypoint.sh /usr/local/bin/keyring-entrypoint")
     raise "Container must start the keyring entrypoint" unless dockerfile.include?("ENTRYPOINT [\"/usr/local/bin/keyring-entrypoint\"]")
     raise "Keyring directory must be writable only by vscode" unless dockerfile.include?("install -d -o vscode -g vscode -m 0700 /home/vscode/.local/share/keyrings")
@@ -53,7 +61,15 @@ teardown() {
   [ "$status" -eq 0 ] || { printf '%s\n' "$output" >&2; false; }
 }
 
-@test "PRD-011: keyring entrypoint starts D-Bus and unlocks the persistent keyring" {
+@test "PRD-011: initializes Copilot after devcontainer creation" {
+  grep -F -q \
+    '"postCreateCommand": "bash provision/copilot-init.sh"' \
+    "${DEVCONTAINER_DIRECTORY}/devcontainer.json"
+  grep -E -q '^[[:space:]]+jq([[:space:]]|$)' \
+    "${DEVCONTAINER_DIRECTORY}/Dockerfile"
+}
+
+@test "PRD-011: keyring entrypoint initializes the empty login keyring" {
   local stub_directory="${TEST_TMP_DIR}/bin"
   local call_log="${TEST_TMP_DIR}/calls"
   local bus_socket="${TEST_TMP_DIR}/dbus"
@@ -69,7 +85,10 @@ SH
   cat >"${stub_directory}/gnome-keyring-daemon" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ "$*" == "--unlock" ]]; then
+if [[ "$*" == "--start --components=secrets" ]]; then
+  printf 'GNOME_KEYRING_CONTROL=%q; export GNOME_KEYRING_CONTROL\n' "${KEYRING_CONTROL}"
+fi
+if [[ "$*" == "--login" ]]; then
   keyring_input="$(cat)"
   [[ -z "${keyring_input}" ]]
 fi
@@ -80,19 +99,48 @@ SH
   run env \
     "PATH=${stub_directory}:${PATH}" \
     "KEYRING_CALL_LOG=${call_log}" \
+    "KEYRING_CONTROL=${TEST_TMP_DIR}/keyring-control" \
     "DBUS_SESSION_BUS_ADDRESS=unix:path=${bus_socket}" \
     "XDG_RUNTIME_DIR=${runtime_directory}" \
     "${DEVCONTAINER_DIRECTORY}/keyring-entrypoint.sh" \
-    bash -c 'printf "%s|%s|%s\n" "$DBUS_SESSION_BUS_ADDRESS" "$XDG_RUNTIME_DIR" "$1"' _ "keyring ready"
+    bash -c 'printf "%s|%s|%s|%s\n" "$DBUS_SESSION_BUS_ADDRESS" "$XDG_RUNTIME_DIR" "$GNOME_KEYRING_CONTROL" "$1"' _ "keyring ready"
 
   [ "$status" -eq 0 ]
-  [ "$output" = "unix:path=${bus_socket}|${runtime_directory}|keyring ready" ]
+  [ "$output" = "unix:path=${bus_socket}|${runtime_directory}|${TEST_TMP_DIR}/keyring-control|keyring ready" ]
   [ ! -e "${runtime_directory}/keyring" ]
   [ ! -e "${bus_socket}" ]
   [ "$(sed -n '1p' "${call_log}")" = "dbus-daemon --session --address=unix:path=${bus_socket} --fork --nopidfile" ]
-  [ "$(sed -n '2p' "${call_log}")" = "gnome-keyring-daemon --start --components=secrets" ]
-  [ "$(sed -n '3p' "${call_log}")" = "gnome-keyring-daemon --unlock" ]
+  [ "$(sed -n '2p' "${call_log}")" = "gnome-keyring-daemon --login" ]
+  [ "$(sed -n '3p' "${call_log}")" = "gnome-keyring-daemon --start --components=secrets" ]
   [ "$(wc -l <"${call_log}")" -eq 3 ]
+}
+
+@test "PRD-011: Secret Service stores and retrieves a keyring secret" {
+  if [[ "${RUN_DEVCONTAINER_SMOKE:-0}" != "1" ]]; then
+    skip "set RUN_DEVCONTAINER_SMOKE=1 to run the Docker integration test"
+  fi
+
+  COMPOSE_PROJECT_NAME="rmz-keyring-smoke-$$"
+  COMPOSE_PROJECT_STARTED=1
+  run docker compose \
+    --project-name "${COMPOSE_PROJECT_NAME}" \
+    --file "${DEVCONTAINER_DIRECTORY}/compose.yaml" \
+    up --build --detach workspace
+  [ "$status" -eq 0 ] || { printf '%s\n' "$output" >&2; false; }
+
+  run docker compose \
+    --project-name "${COMPOSE_PROJECT_NAME}" \
+    --file "${DEVCONTAINER_DIRECTORY}/compose.yaml" \
+    exec -T workspace bash -lc '
+      set -euo pipefail
+      command -v secret-tool >/dev/null
+      trap "secret-tool clear service copilot-cli smoke test >/dev/null 2>&1 || true" EXIT
+      printf "%s" "synthetic-keyring-test" |
+        secret-tool store --label="rmz-keyring-smoke" service copilot-cli smoke test
+      secret_value="$(secret-tool lookup service copilot-cli smoke test)"
+      test "${secret_value}" = "synthetic-keyring-test"
+    '
+  [ "$status" -eq 0 ] || { printf '%s\n' "$output" >&2; false; }
 }
 
 @test "PRD-011: README documents Docker installation on Windows and Ubuntu" {

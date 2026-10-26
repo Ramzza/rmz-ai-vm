@@ -24,13 +24,13 @@ jobs:
 
       - name: Build
         run: |
-          bash -n provision/bootstrap.sh scripts/rmz-copilot.sh scripts/setup-rmz-copilot.sh tests/shell-line-endings.sh
+          bash -n .devcontainer/keyring-entrypoint.sh provision/bootstrap.sh scripts/rmz-copilot.sh scripts/setup-rmz-copilot.sh tests/shell-line-endings.sh
           ruby -c Vagrantfile
           docker compose --project-name rmz-container --file .devcontainer/compose.yaml config --quiet
 
       - name: Test
         run: |
-          bats tests
+          RUN_DEVCONTAINER_SMOKE=1 bats tests
           bash tests/shell-line-endings.sh
 
   test-windows-host-command:

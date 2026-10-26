@@ -55,6 +55,21 @@ try {
 
         $dockerArguments = $composePrefix + @(
             'exec'
+            '-T'
+            '--workdir'
+            $workspaceFolder
+            'workspace'
+            'bash'
+            'provision/copilot-init.sh'
+        )
+        & docker @dockerArguments
+        $initExitCode = $LASTEXITCODE
+        if ($initExitCode -ne 0) {
+            throw "Copilot initialization failed with exit code $initExitCode."
+        }
+
+        $dockerArguments = $composePrefix + @(
+            'exec'
             '--interactive'
             '--tty'
             '--workdir'

@@ -85,6 +85,12 @@ The `.devcontainer` directory configures a Linux container with Copilot CLI, Nod
 
 Copilot CLI `/login` credentials use the container's GNOME Keyring and persist in a Docker volume across container stop, recreation, and removal. For headless startup, the keyring is automatically created and unlocked with an empty passphrase; the volume is not protected by a keyring password, and anyone with access to Docker can access its contents.
 
+VS Code Dev Containers initializes Copilot after workspace creation using the same `provision/copilot-init.sh` script as the VM: it registers the RMZ marketplace, links repository instructions, and applies managed settings. The Windows `rmz-container` command runs this initialization before opening its shell. The `rmz-ai-skills` plugin remains a separate install:
+
+```bash
+copilot plugin install rmz-ai-skills@rmz-ai-marketplace
+```
+
 On Windows, run the setup script once from this repository to add `rmz-container` to your PowerShell profile:
 
 ```powershell
@@ -230,6 +236,14 @@ RUN_VAGRANT_SMOKE=1 bats tests/vagrant-smoke.bats
 ```
 
 The smoke test uses an isolated project copy, a unique VirtualBox name, and a temporary `VAGRANT_HOME`; it checks that Copilot opens in a pseudo-terminal before initialization, runs `copilot-init`, verifies the marketplace registration and imported instructions/settings, and destroys the test VM.
+
+To verify the devcontainer's GNOME Keyring Secret Service with a real secret write/read, use a host with Docker Compose and internet access:
+
+```sh
+RUN_DEVCONTAINER_SMOKE=1 bats tests/devcontainer-contract.bats
+```
+
+This smoke test builds an isolated container and removes its temporary container and keyring volume afterward.
 
 On Windows, run the PowerShell host-command tests with:
 

@@ -11,7 +11,9 @@ RUN apt-get update \
         git \
         gnome-keyring \
         gnupg \
+        jq \
         libsecret-1-0 \
+        libsecret-tools \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get update \
     && apt-get install --yes --no-install-recommends nodejs \
