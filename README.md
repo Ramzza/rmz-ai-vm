@@ -85,7 +85,7 @@ The `.devcontainer` directory configures a Linux container with Copilot CLI, Cla
 
 Copilot CLI `/login` credentials use the container's GNOME Keyring and persist in a Docker volume across container stop, recreation, and removal. For headless startup, the keyring is automatically created and unlocked with an empty passphrase; the volume is not protected by a keyring password, and anyone with access to Docker can access its contents.
 
-GitHub CLI is installed from GitHub's official stable APT repository; run `gh auth login` once. Its token is stored in the same persistent keyring.
+GitHub CLI is installed from GitHub's official stable APT repository; run `gh auth login` once. Its token is stored in the same persistent keyring, and its account configuration (`~/.config/gh`) persists in the `gh-config` Docker volume, so the login survives host restarts and container recreation.
 
 Claude Code is installed for the container user; run `claude` and log in once. Its configuration and credentials persist in the `claude-config` Docker volume across container recreation and removal.
 

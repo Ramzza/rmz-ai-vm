@@ -62,6 +62,10 @@ teardown() {
     raise "Compose must set the D-Bus session address" unless service.fetch("environment").fetch("DBUS_SESSION_BUS_ADDRESS") == "unix:path=/tmp/copilot-keyring-bus"
     raise "Compose must set the D-Bus runtime directory" unless service.fetch("environment").fetch("XDG_RUNTIME_DIR") == "/tmp/copilot-keyring-runtime"
     raise "Compose must persist the keyring data in a named volume" unless keyring_mount && keyring_mount["type"] == "volume" && keyring_mount["source"] == "copilot-keyring" && compose.fetch("volumes").key?("copilot-keyring")
+    gh_config_mount = service.fetch("volumes").find { |volume| volume["target"] == "/home/vscode/.config/gh" }
+    raise "User config directory must be owned by vscode" unless dockerfile.include?("install -d -o vscode -g vscode -m 0755 /home/vscode/.config")
+    raise "GitHub CLI config directory must be writable only by vscode" unless dockerfile.include?("install -d -o vscode -g vscode -m 0700 /home/vscode/.config/gh")
+    raise "Compose must persist GitHub CLI login state in a named volume" unless gh_config_mount && gh_config_mount["type"] == "volume" && gh_config_mount["source"] == "gh-config" && compose.fetch("volumes").key?("gh-config")
   ' \
     "${DEVCONTAINER_DIRECTORY}/devcontainer.json" \
     "${DEVCONTAINER_DIRECTORY}/compose.yaml" \

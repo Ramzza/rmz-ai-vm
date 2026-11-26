@@ -21,7 +21,11 @@ services:
       - type: volume
         source: claude-config
         target: /home/vscode/.claude
+      - type: volume
+        source: gh-config
+        target: /home/vscode/.config/gh
 
 volumes:
   claude-config:
   copilot-keyring:
+  gh-config:

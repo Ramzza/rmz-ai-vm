@@ -42,6 +42,8 @@ RUN mkdir -p /usr/share/man/man1 \
     && install -d -o vscode -g vscode -m 0755 /home/vscode/.local /home/vscode/.local/bin /home/vscode/.local/share \
     && install -d -o vscode -g vscode -m 0700 /home/vscode/.local/share/keyrings \
     && install -d -o vscode -g vscode -m 0700 /home/vscode/.claude \
+    && install -d -o vscode -g vscode -m 0755 /home/vscode/.config \
+    && install -d -o vscode -g vscode -m 0700 /home/vscode/.config/gh \
     && install -d -o vscode -g vscode -m 0755 /opt/android-sdk \
     && rm -rf /var/lib/apt/lists/*
 
