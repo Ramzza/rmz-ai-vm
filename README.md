@@ -81,9 +81,11 @@ Log out and back in for the Docker group change to take effect. Membership in th
 
 ## Use the devcontainer
 
-The `.devcontainer` directory configures a Linux container with Copilot CLI, Node.js v22, and Python 3.15. It mounts the parent of this repository at `/workspace`, so this repository and sibling projects are available in the container.
+The `.devcontainer` directory configures a Linux container with Copilot CLI, Claude Code, Node.js v22, and Python 3.15. It mounts the parent of this repository at `/workspace`, so this repository and sibling projects are available in the container.
 
 Copilot CLI `/login` credentials use the container's GNOME Keyring and persist in a Docker volume across container stop, recreation, and removal. For headless startup, the keyring is automatically created and unlocked with an empty passphrase; the volume is not protected by a keyring password, and anyone with access to Docker can access its contents.
+
+Claude Code is installed for the container user; run `claude` and log in once. Its configuration and credentials persist in the `claude-config` Docker volume across container recreation and removal.
 
 VS Code Dev Containers initializes Copilot after workspace creation using the same `provision/copilot-init.sh` script as the VM: it registers the RMZ marketplace, links repository instructions, and applies managed settings. The Windows `rmz-container` command runs this initialization before opening its shell. The `rmz-ai-skills` plugin remains a separate install:
 
@@ -103,7 +105,7 @@ Open a new PowerShell session, then run:
 rmz-container
 ```
 
-The command can be run from any working directory; it creates or starts the container and opens an interactive Bash shell in this repository. Use `--recreate` to rebuild and recreate it, `--stop` to stop it, or `--down` to stop and remove it:
+The command can be run from any working directory; it rebuilds the image if the devcontainer definition changed (cached otherwise), creates or starts the container, and opens an interactive Bash shell in this repository. Use `--recreate` to rebuild and recreate it, `--stop` to stop it, or `--down` to stop and remove it:
 
 ```powershell
 rmz-container --recreate

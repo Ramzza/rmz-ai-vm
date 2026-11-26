@@ -20,7 +20,9 @@ RUN apt-get update \
     && curl -fsSL https://gh.io/copilot-install | bash \
     && groupadd --gid 1000 vscode \
     && useradd --uid 1000 --gid vscode --create-home --shell /bin/bash vscode \
+    && install -d -o vscode -g vscode -m 0755 /home/vscode/.local /home/vscode/.local/bin /home/vscode/.local/share \
     && install -d -o vscode -g vscode -m 0700 /home/vscode/.local/share/keyrings \
+    && install -d -o vscode -g vscode -m 0700 /home/vscode/.claude \
     && rm -rf /var/lib/apt/lists/*
 
 COPY .devcontainer/keyring-entrypoint.sh /usr/local/bin/keyring-entrypoint
@@ -29,4 +31,7 @@ RUN chmod 0755 /usr/local/bin/keyring-entrypoint
 ENTRYPOINT ["/usr/local/bin/keyring-entrypoint"]
 
 USER vscode
+RUN curl -fsSL https://claude.ai/install.sh | bash
+ENV PATH="/home/vscode/.local/bin:${PATH}"
+
 WORKDIR /workspace

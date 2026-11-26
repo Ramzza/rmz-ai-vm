@@ -18,7 +18,7 @@ teardown() {
   rm -rf -- "${TEST_TMP_DIR}"
 }
 
-@test "PRD-011: devcontainer mounts the parent and installs required runtimes" {
+@test "PRD-011: devcontainer mounts the parent and installs required runtimes and CLIs" {
   run ruby -rjson -ryaml -e '
     config_path, compose_path, dockerfile_path = ARGV
     keyring_entrypoint_path = File.join(File.dirname(dockerfile_path), "keyring-entrypoint.sh")
@@ -45,6 +45,15 @@ teardown() {
     raise "Container must install Node.js 22" unless dockerfile.include?("https://deb.nodesource.com/setup_22.x")
     raise "Container must install the nodejs package" unless dockerfile.include?("apt-get install --yes --no-install-recommends nodejs")
     raise "Container must install Copilot CLI with the official installer" unless dockerfile.include?("https://gh.io/copilot-install")
+    claude_mount = service.fetch("volumes").find { |volume| volume["target"] == "/home/vscode/.claude" }
+    claude_install = dockerfile.index("https://claude.ai/install.sh")
+    raise "Container must install Claude Code with the official installer" unless claude_install
+    raise "Claude Code must be installed for the vscode user" unless dockerfile.index(/^USER vscode$/) < claude_install
+    raise "User-local directories must be writable by vscode" unless dockerfile.include?("install -d -o vscode -g vscode -m 0755 /home/vscode/.local /home/vscode/.local/bin /home/vscode/.local/share")
+    raise "Claude Code must be on PATH" unless dockerfile.match?(%r{^ENV PATH="/home/vscode/\.local/bin:\$\{PATH\}"$})
+    raise "Claude config directory must be writable only by vscode" unless dockerfile.include?("install -d -o vscode -g vscode -m 0700 /home/vscode/.claude")
+    raise "Compose must set the Claude config directory" unless service.fetch("environment").fetch("CLAUDE_CONFIG_DIR") == "/home/vscode/.claude"
+    raise "Compose must persist Claude Code state in a named volume" unless claude_mount && claude_mount["type"] == "volume" && claude_mount["source"] == "claude-config" && compose.fetch("volumes").key?("claude-config")
     raise "Container must run as vscode" unless dockerfile.match?(/^USER vscode$/)
     raise "Container must install D-Bus, GNOME Keyring, and libsecret tools" unless keyring_packages.all? { |package| dockerfile.include?(package) }
     raise "Container must copy the keyring entrypoint" unless dockerfile.include?("COPY .devcontainer/keyring-entrypoint.sh /usr/local/bin/keyring-entrypoint")

@@ -127,8 +127,8 @@ try {
     Push-Location -LiteralPath $workingDirectory
     try {
         rmz-container
-        Assert-Equal "$composePrefix up --detach|$repoRoot" $global:DockerCalls[0] `
-            'PRD-011: The command must start the container from outside the repository.'
+        Assert-Equal "$composePrefix up --detach --build|$repoRoot" $global:DockerCalls[0] `
+            'PRD-011: The command must rebuild a stale image and start the container from outside the repository.'
         Assert-Equal (
             "$composePrefix exec -T --workdir $workspaceFolder workspace bash provision/copilot-init.sh|$repoRoot"
         ) $global:DockerCalls[1] `

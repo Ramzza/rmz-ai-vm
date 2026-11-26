@@ -42,9 +42,9 @@ try {
         }
     }
     else {
-        $dockerArguments = $composePrefix + @('up', '--detach')
+        $dockerArguments = $composePrefix + @('up', '--detach', '--build')
         if ($recreateRequested) {
-            $dockerArguments += @('--build', '--force-recreate')
+            $dockerArguments += @('--force-recreate')
         }
 
         & docker @dockerArguments
