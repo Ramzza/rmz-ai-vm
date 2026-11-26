@@ -174,20 +174,14 @@ fi
 printf 'Copilot profile initialized from %s\n' "${REPOSITORY_ROOT}"
 
 if command -v claude >/dev/null 2>&1; then
-  if claude plugin marketplace add "${MARKETPLACE_SOURCE}"; then
-    :
-  else
-    printf 'Could not add Claude Code plugin marketplace: %s\n' \
+  if ! claude plugin marketplace add "${MARKETPLACE_SOURCE}"; then
+    printf 'Warning: could not add Claude Code plugin marketplace: %s\n' \
       "${MARKETPLACE_SOURCE}" >&2
-    false
-  fi
-
-  if claude plugin install "${CLAUDE_SKILLS_PLUGIN}" --scope user; then
+  elif claude plugin install "${CLAUDE_SKILLS_PLUGIN}" --scope user; then
     printf 'Claude Code RMZ skills installed from %s\n' "${MARKETPLACE_SOURCE}"
   else
-    printf 'Could not install Claude Code plugin: %s\n' \
+    printf 'Warning: could not install Claude Code plugin: %s\n' \
       "${CLAUDE_SKILLS_PLUGIN}" >&2
-    false
   fi
 else
   printf 'Claude Code not found; skipping RMZ skills for Claude Code.\n'

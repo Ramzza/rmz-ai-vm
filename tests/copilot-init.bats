@@ -320,14 +320,15 @@ assert_managed_settings() {
   [ -L "${TEST_HOME}/.copilot/copilot-instructions.md" ]
 }
 
-@test "PRD-013: reports Claude Code marketplace and plugin failures" {
+@test "PRD-013: warns about Claude Code failures without blocking Copilot setup" {
   CLAUDE_ADD_STATUS=1
   run run_init
   unset CLAUDE_ADD_STATUS
 
-  [ "${status}" -ne 0 ]
-  [[ "${output}" == *"Could not add Claude Code plugin marketplace"* ]]
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *"Warning: could not add Claude Code plugin marketplace: Ramzza/rmz-ai-marketplace"* ]]
   [[ "${output}" == *"Simulated Claude marketplace add failure"* ]]
+  [ -L "${TEST_HOME}/.copilot/copilot-instructions.md" ]
   run grep -Fq 'plugin install' "${CLAUDE_COMMAND_LOG}"
   [ "${status}" -ne 0 ]
 
@@ -336,8 +337,8 @@ assert_managed_settings() {
   run run_init
   unset CLAUDE_INSTALL_STATUS
 
-  [ "${status}" -ne 0 ]
-  [[ "${output}" == *"Could not install Claude Code plugin: rmz-ai-skills@rmz-ai-marketplace"* ]]
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *"Warning: could not install Claude Code plugin: rmz-ai-skills@rmz-ai-marketplace"* ]]
   [[ "${output}" == *"Simulated Claude plugin install failure"* ]]
 }
 

@@ -104,7 +104,7 @@ claude plugin marketplace add Ramzza/rmz-ai-marketplace
 claude plugin install rmz-ai-skills@rmz-ai-marketplace
 ```
 
-The plugin is reinstalled on each initialization, so uninstall it from Claude Code only if you also stop running `copilot-init`. The VM does not install Claude Code, so `copilot-init` skips this step there.
+The plugin is reinstalled on each initialization, so uninstall it from Claude Code only if you also stop running `copilot-init`. The VM does not install Claude Code, so `copilot-init` skips this step there. If the Claude Code marketplace or plugin step fails, for example without network access, initialization prints a warning and continues.
 
 On Windows, run the setup script once from this repository to add `rmz-container` to your PowerShell profile:
 
