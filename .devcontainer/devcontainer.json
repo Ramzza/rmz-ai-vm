@@ -4,5 +4,6 @@
   "service": "workspace",
   "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
   "remoteUser": "vscode",
+  "postCreateCommand": "bash provision/copilot-init.sh",
   "shutdownAction": "none"
 }

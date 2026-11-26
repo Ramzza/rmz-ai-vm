@@ -7,7 +7,8 @@ chmod 0700 "${XDG_RUNTIME_DIR}"
 rm -rf "${XDG_RUNTIME_DIR}/keyring"
 rm -f "${bus_socket}"
 dbus-daemon --session --address="${DBUS_SESSION_BUS_ADDRESS}" --fork --nopidfile
-gnome-keyring-daemon --start --components=secrets >/dev/null
-printf '\n' | gnome-keyring-daemon --unlock >/dev/null
+printf '\n' | gnome-keyring-daemon --login >/dev/null
+keyring_environment="$(gnome-keyring-daemon --start --components=secrets)"
+eval "${keyring_environment}"
 
 exec "$@"

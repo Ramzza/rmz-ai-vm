@@ -42,15 +42,30 @@ try {
         }
     }
     else {
-        $dockerArguments = $composePrefix + @('up', '--detach')
+        $dockerArguments = $composePrefix + @('up', '--detach', '--build')
         if ($recreateRequested) {
-            $dockerArguments += @('--build', '--force-recreate')
+            $dockerArguments += @('--force-recreate')
         }
 
         & docker @dockerArguments
         $upExitCode = $LASTEXITCODE
         if ($upExitCode -ne 0) {
             throw "docker compose up failed with exit code $upExitCode."
+        }
+
+        $dockerArguments = $composePrefix + @(
+            'exec'
+            '-T'
+            '--workdir'
+            $workspaceFolder
+            'workspace'
+            'bash'
+            'provision/copilot-init.sh'
+        )
+        & docker @dockerArguments
+        $initExitCode = $LASTEXITCODE
+        if ($initExitCode -ne 0) {
+            throw "Copilot initialization failed with exit code $initExitCode."
         }
 
         $dockerArguments = $composePrefix + @(

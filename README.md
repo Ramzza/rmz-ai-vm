@@ -81,9 +81,30 @@ Log out and back in for the Docker group change to take effect. Membership in th
 
 ## Use the devcontainer
 
-The `.devcontainer` directory configures a Linux container with Copilot CLI, Node.js v22, and Python 3.15. It mounts the parent of this repository at `/workspace`, so this repository and sibling projects are available in the container.
+The `.devcontainer` directory configures a Linux container with Copilot CLI, Claude Code, GitHub CLI (`gh`), Node.js v22, Python 3.15, and an Android build toolchain (OpenJDK 25 and the Android SDK). It mounts the parent of this repository at `/workspace`, so this repository and sibling projects are available in the container.
 
 Copilot CLI `/login` credentials use the container's GNOME Keyring and persist in a Docker volume across container stop, recreation, and removal. For headless startup, the keyring is automatically created and unlocked with an empty passphrase; the volume is not protected by a keyring password, and anyone with access to Docker can access its contents.
+
+GitHub CLI is installed from GitHub's official stable APT repository; run `gh auth login` once. Its token is stored in the same persistent keyring.
+
+Claude Code is installed for the container user; run `claude` and log in once. Its configuration and credentials persist in the `claude-config` Docker volume across container recreation and removal.
+
+For Android development, the image includes OpenJDK 25, the Android SDK command-line tools, `platform-tools` (`adb`), `platforms;android-37.0`, and `build-tools;37.0.0`, with all SDK licenses accepted. `JAVA_HOME`, `ANDROID_HOME`, and `ANDROID_SDK_ROOT` (`/opt/android-sdk`) are set, and `sdkmanager` and `adb` are on `PATH`. Build with the project's Gradle wrapper (`./gradlew`), which downloads Gradle on first use and needs network access. To match a project's `compileSdk` and build tools, change the `ANDROID_PLATFORM` and `ANDROID_BUILD_TOOLS` defaults in `.devcontainer/Dockerfile`; the next `rmz-container` launch rebuilds the image. The SDK is writable by the container user, so Gradle can also download missing components itself.
+
+VS Code Dev Containers initializes Copilot after workspace creation using the same `provision/copilot-init.sh` script as the VM: it registers the RMZ marketplace, links repository instructions, and applies managed settings. The Windows `rmz-container` command runs this initialization before opening its shell. For Copilot CLI, the `rmz-ai-skills` plugin remains a separate install:
+
+```bash
+copilot plugin install rmz-ai-skills@rmz-ai-marketplace
+```
+
+When Claude Code is installed, as in the devcontainer, the same initialization registers the marketplace and installs the RMZ skills for Claude Code at user scope. Claude Code then loads the same skill tree as Copilot CLI. To install the skills manually:
+
+```bash
+claude plugin marketplace add Ramzza/rmz-ai-marketplace
+claude plugin install rmz-ai-skills@rmz-ai-marketplace
+```
+
+The plugin is reinstalled on each initialization, so uninstall it from Claude Code only if you also stop running `copilot-init`. The VM does not install Claude Code, so `copilot-init` skips this step there. If the Claude Code marketplace or plugin step fails, for example without network access, initialization prints a warning and continues.
 
 On Windows, run the setup script once from this repository to add `rmz-container` to your PowerShell profile:
 
@@ -97,7 +118,7 @@ Open a new PowerShell session, then run:
 rmz-container
 ```
 
-The command can be run from any working directory; it creates or starts the container and opens an interactive Bash shell in this repository. Use `--recreate` to rebuild and recreate it, `--stop` to stop it, or `--down` to stop and remove it:
+The command can be run from any working directory; it rebuilds the image if the devcontainer definition changed (cached otherwise), creates or starts the container, and opens an interactive Bash shell in this repository. Use `--recreate` to rebuild and recreate it, `--stop` to stop it, or `--down` to stop and remove it:
 
 ```powershell
 rmz-container --recreate
@@ -231,6 +252,14 @@ RUN_VAGRANT_SMOKE=1 bats tests/vagrant-smoke.bats
 
 The smoke test uses an isolated project copy, a unique VirtualBox name, and a temporary `VAGRANT_HOME`; it checks that Copilot opens in a pseudo-terminal before initialization, runs `copilot-init`, verifies the marketplace registration and imported instructions/settings, and destroys the test VM.
 
+To verify the devcontainer's GNOME Keyring Secret Service with a real secret write/read, use a host with Docker Compose and internet access:
+
+```sh
+RUN_DEVCONTAINER_SMOKE=1 bats tests/devcontainer-contract.bats
+```
+
+This smoke test builds an isolated container and removes its temporary container and keyring volume afterward.
+
 On Windows, run the PowerShell host-command tests with:
 
 ```powershell
@@ -240,7 +269,7 @@ On Windows, run the PowerShell host-command tests with:
 
 ## Copilot configuration
 
-Provisioning installs the system-wide `copilot-init` command but leaves the VM user's `~/.copilot` profile untouched. Run `copilot-init` inside the VM to register `Ramzza/rmz-ai-marketplace`, link this repository's `.github/copilot-instructions.md`, and merge `provision/copilot-settings.json` into `~/.copilot/settings.json`. The managed settings select `gpt-6-luna` at `max` effort, hide the Gists tab, and enable every documented `footer.show*` status-line field (the CLI calls this display the footer). Each run reapplies those managed values, avoids duplicate marketplace registration, preserves unrelated preferences and conflicting user-owned instruction targets, and removes only stale skill symlinks from the VM repository's former `.github/skills/` directory. Marketplace plugins are not installed automatically; install the skill collection with `copilot plugin install rmz-ai-skills@rmz-ai-marketplace`.
+Provisioning installs the system-wide `copilot-init` command but leaves the VM user's `~/.copilot` profile untouched. Run `copilot-init` inside the VM to register `Ramzza/rmz-ai-marketplace`, link this repository's `.github/copilot-instructions.md`, and merge `provision/copilot-settings.json` into `~/.copilot/settings.json`. The managed settings select `gpt-6-luna` at `max` effort, hide the Gists tab, and enable every documented `footer.show*` status-line field (the CLI calls this display the footer). Each run reapplies those managed values, avoids duplicate marketplace registration, preserves unrelated preferences and conflicting user-owned instruction targets, and removes only stale skill symlinks from the VM repository's former `.github/skills/` directory. Marketplace plugins are not installed automatically for Copilot CLI; install the skill collection with `copilot plugin install rmz-ai-skills@rmz-ai-marketplace`. Where Claude Code is installed, `copilot-init` also installs that plugin for Claude Code.
 
 The `rmz-ai-skills` plugin in the marketplace contains all former VM skills, including the document/PDFtk, `playwright-explore-website`, and RMZ workflow skills with their scripts, references, and test instructions. Third-party attribution is preserved in the plugin's `THIRD-PARTY-LICENSES.md`. The `pdftk-server` skill uses the `pdftk` package installed by provisioning.
 
