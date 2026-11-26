@@ -11,13 +11,24 @@ setup() {
   TEST_BIN="${TEST_DIRECTORY}/bin"
   COPILOT_MARKETPLACE_STATE="${TEST_DIRECTORY}/marketplace-registered"
   COPILOT_COMMAND_LOG="${TEST_DIRECTORY}/copilot.log"
+  TEST_CLAUDE_BIN="${TEST_DIRECTORY}/claude-bin"
+  CLAUDE_COMMAND_LOG="${TEST_DIRECTORY}/claude.log"
+  BASE_PATH=""
+  IFS=':' read -r -a path_entries <<<"${PATH}"
+  for path_entry in "${path_entries[@]}"; do
+    if [[ -n "${path_entry}" && ! -x "${path_entry}/claude" ]]; then
+      BASE_PATH="${BASE_PATH:+${BASE_PATH}:}${path_entry}"
+    fi
+  done
   mkdir -p \
+    "${TEST_CLAUDE_BIN}" \
     "${TEST_REPOSITORY}/provision" \
     "${TEST_REPOSITORY}/.github" \
     "${TEST_REPOSITORY}/.github/skills" \
     "${TEST_HOME}" \
     "${TEST_BIN}"
   : >"${COPILOT_COMMAND_LOG}"
+  : >"${CLAUDE_COMMAND_LOG}"
   if [[ -f "${COPILOT_INIT_SOURCE}" ]]; then
     cp "${COPILOT_INIT_SOURCE}" "${TEST_REPOSITORY}/provision/copilot-init.sh"
   fi
@@ -49,6 +60,26 @@ else
 fi
 EOF
   chmod +x "${TEST_BIN}/copilot"
+  cat >"${TEST_CLAUDE_BIN}/claude" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >>"${CLAUDE_COMMAND_LOG}"
+if [[ "$*" == "plugin marketplace add Ramzza/rmz-ai-marketplace" ]]; then
+  if [[ "${CLAUDE_ADD_STATUS:-0}" -ne 0 ]]; then
+    printf '%s\n' 'Simulated Claude marketplace add failure' >&2
+    false
+  fi
+elif [[ "$*" == "plugin install rmz-ai-skills@rmz-ai-marketplace --scope user" ]]; then
+  if [[ "${CLAUDE_INSTALL_STATUS:-0}" -ne 0 ]]; then
+    printf '%s\n' 'Simulated Claude plugin install failure' >&2
+    false
+  fi
+else
+  printf 'Unexpected Claude command: %s\n' "$*" >&2
+  false
+fi
+EOF
+  chmod +x "${TEST_CLAUDE_BIN}/claude"
 }
 
 teardown() {
@@ -56,9 +87,16 @@ teardown() {
 }
 
 run_init() {
-  env \
+  local init_path="${TEST_BIN}:${BASE_PATH}"
+  if [[ "${CLAUDE_ON_PATH:-1}" -eq 1 ]]; then
+    init_path="${TEST_BIN}:${TEST_CLAUDE_BIN}:${BASE_PATH}"
+  fi
+  env -u CLAUDE_CONFIG_DIR \
     HOME="${TEST_HOME}" \
-    PATH="${TEST_BIN}:${PATH}" \
+    PATH="${init_path}" \
+    CLAUDE_COMMAND_LOG="${CLAUDE_COMMAND_LOG}" \
+    CLAUDE_ADD_STATUS="${CLAUDE_ADD_STATUS:-0}" \
+    CLAUDE_INSTALL_STATUS="${CLAUDE_INSTALL_STATUS:-0}" \
     COPILOT_MARKETPLACE_STATE="${COPILOT_MARKETPLACE_STATE}" \
     COPILOT_COMMAND_LOG="${COPILOT_COMMAND_LOG}" \
     COPILOT_LIST_STATUS="${COPILOT_LIST_STATUS:-0}" \
@@ -251,4 +289,59 @@ assert_managed_settings() {
   [ ! -e "${TEST_HOME}/.copilot/skills/playwright-explore-website" ]
   grep -Fqx 'plugin marketplace add Ramzza/rmz-ai-marketplace' \
     "${COPILOT_COMMAND_LOG}"
+}
+
+@test "PRD-013: installs the RMZ skills plugin for Claude Code idempotently" {
+  expected_claude_commands="$(printf '%s\n' \
+    'plugin marketplace add Ramzza/rmz-ai-marketplace' \
+    'plugin install rmz-ai-skills@rmz-ai-marketplace --scope user')"
+
+  run run_init
+
+  [ "${status}" -eq 0 ]
+  [ "$(cat "${CLAUDE_COMMAND_LOG}")" = "${expected_claude_commands}" ]
+  [ ! -e "${TEST_HOME}/.claude" ]
+
+  : >"${CLAUDE_COMMAND_LOG}"
+  run run_init
+
+  [ "${status}" -eq 0 ]
+  [ "$(cat "${CLAUDE_COMMAND_LOG}")" = "${expected_claude_commands}" ]
+}
+
+@test "PRD-013: skips Claude Code setup when Claude Code is not installed" {
+  CLAUDE_ON_PATH=0
+  run run_init
+  unset CLAUDE_ON_PATH
+
+  [ "${status}" -eq 0 ]
+  [[ "${output}" == *"Claude Code not found; skipping RMZ skills for Claude Code"* ]]
+  [ ! -s "${CLAUDE_COMMAND_LOG}" ]
+  [ -L "${TEST_HOME}/.copilot/copilot-instructions.md" ]
+}
+
+@test "PRD-013: reports Claude Code marketplace and plugin failures" {
+  CLAUDE_ADD_STATUS=1
+  run run_init
+  unset CLAUDE_ADD_STATUS
+
+  [ "${status}" -ne 0 ]
+  [[ "${output}" == *"Could not add Claude Code plugin marketplace"* ]]
+  [[ "${output}" == *"Simulated Claude marketplace add failure"* ]]
+  run grep -Fq 'plugin install' "${CLAUDE_COMMAND_LOG}"
+  [ "${status}" -ne 0 ]
+
+  : >"${CLAUDE_COMMAND_LOG}"
+  CLAUDE_INSTALL_STATUS=1
+  run run_init
+  unset CLAUDE_INSTALL_STATUS
+
+  [ "${status}" -ne 0 ]
+  [[ "${output}" == *"Could not install Claude Code plugin: rmz-ai-skills@rmz-ai-marketplace"* ]]
+  [[ "${output}" == *"Simulated Claude plugin install failure"* ]]
+}
+
+@test "PRD-013: documents RMZ skills for Claude Code" {
+  grep -Fq 'claude plugin install rmz-ai-skills@rmz-ai-marketplace' \
+    "${REPO_ROOT}/README.md"
 }

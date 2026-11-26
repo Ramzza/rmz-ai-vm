@@ -91,11 +91,20 @@ Claude Code is installed for the container user; run `claude` and log in once. I
 
 For Android development, the image includes OpenJDK 25, the Android SDK command-line tools, `platform-tools` (`adb`), `platforms;android-37.0`, and `build-tools;37.0.0`, with all SDK licenses accepted. `JAVA_HOME`, `ANDROID_HOME`, and `ANDROID_SDK_ROOT` (`/opt/android-sdk`) are set, and `sdkmanager` and `adb` are on `PATH`. Build with the project's Gradle wrapper (`./gradlew`), which downloads Gradle on first use and needs network access. To match a project's `compileSdk` and build tools, change the `ANDROID_PLATFORM` and `ANDROID_BUILD_TOOLS` defaults in `.devcontainer/Dockerfile`; the next `rmz-container` launch rebuilds the image. The SDK is writable by the container user, so Gradle can also download missing components itself.
 
-VS Code Dev Containers initializes Copilot after workspace creation using the same `provision/copilot-init.sh` script as the VM: it registers the RMZ marketplace, links repository instructions, and applies managed settings. The Windows `rmz-container` command runs this initialization before opening its shell. The `rmz-ai-skills` plugin remains a separate install:
+VS Code Dev Containers initializes Copilot after workspace creation using the same `provision/copilot-init.sh` script as the VM: it registers the RMZ marketplace, links repository instructions, and applies managed settings. The Windows `rmz-container` command runs this initialization before opening its shell. For Copilot CLI, the `rmz-ai-skills` plugin remains a separate install:
 
 ```bash
 copilot plugin install rmz-ai-skills@rmz-ai-marketplace
 ```
+
+When Claude Code is installed, as in the devcontainer, the same initialization registers the marketplace and installs the RMZ skills for Claude Code at user scope. Claude Code then loads the same skill tree as Copilot CLI. To install the skills manually:
+
+```bash
+claude plugin marketplace add Ramzza/rmz-ai-marketplace
+claude plugin install rmz-ai-skills@rmz-ai-marketplace
+```
+
+The plugin is reinstalled on each initialization, so uninstall it from Claude Code only if you also stop running `copilot-init`. The VM does not install Claude Code, so `copilot-init` skips this step there.
 
 On Windows, run the setup script once from this repository to add `rmz-container` to your PowerShell profile:
 
@@ -260,7 +269,7 @@ On Windows, run the PowerShell host-command tests with:
 
 ## Copilot configuration
 
-Provisioning installs the system-wide `copilot-init` command but leaves the VM user's `~/.copilot` profile untouched. Run `copilot-init` inside the VM to register `Ramzza/rmz-ai-marketplace`, link this repository's `.github/copilot-instructions.md`, and merge `provision/copilot-settings.json` into `~/.copilot/settings.json`. The managed settings select `gpt-6-luna` at `max` effort, hide the Gists tab, and enable every documented `footer.show*` status-line field (the CLI calls this display the footer). Each run reapplies those managed values, avoids duplicate marketplace registration, preserves unrelated preferences and conflicting user-owned instruction targets, and removes only stale skill symlinks from the VM repository's former `.github/skills/` directory. Marketplace plugins are not installed automatically; install the skill collection with `copilot plugin install rmz-ai-skills@rmz-ai-marketplace`.
+Provisioning installs the system-wide `copilot-init` command but leaves the VM user's `~/.copilot` profile untouched. Run `copilot-init` inside the VM to register `Ramzza/rmz-ai-marketplace`, link this repository's `.github/copilot-instructions.md`, and merge `provision/copilot-settings.json` into `~/.copilot/settings.json`. The managed settings select `gpt-6-luna` at `max` effort, hide the Gists tab, and enable every documented `footer.show*` status-line field (the CLI calls this display the footer). Each run reapplies those managed values, avoids duplicate marketplace registration, preserves unrelated preferences and conflicting user-owned instruction targets, and removes only stale skill symlinks from the VM repository's former `.github/skills/` directory. Marketplace plugins are not installed automatically for Copilot CLI; install the skill collection with `copilot plugin install rmz-ai-skills@rmz-ai-marketplace`. Where Claude Code is installed, `copilot-init` also installs that plugin for Claude Code.
 
 The `rmz-ai-skills` plugin in the marketplace contains all former VM skills, including the document/PDFtk, `playwright-explore-website`, and RMZ workflow skills with their scripts, references, and test instructions. Third-party attribution is preserved in the plugin's `THIRD-PARTY-LICENSES.md`. The `pdftk-server` skill uses the `pdftk` package installed by provisioning.
 

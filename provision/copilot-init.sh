@@ -11,6 +11,7 @@ readonly COPILOT_HOME="${HOME:?HOME must be set}/.copilot"
 readonly COPILOT_SKILLS="${COPILOT_HOME}/skills"
 readonly MARKETPLACE_NAME="rmz-ai-marketplace"
 readonly MARKETPLACE_SOURCE="Ramzza/rmz-ai-marketplace"
+readonly CLAUDE_SKILLS_PLUGIN="rmz-ai-skills@${MARKETPLACE_NAME}"
 
 if [[ ! -f "${INSTRUCTIONS_SOURCE}" ]]; then
   printf 'Copilot instructions file not found: %s\n' "${INSTRUCTIONS_SOURCE}" >&2
@@ -171,3 +172,23 @@ else
 fi
 
 printf 'Copilot profile initialized from %s\n' "${REPOSITORY_ROOT}"
+
+if command -v claude >/dev/null 2>&1; then
+  if claude plugin marketplace add "${MARKETPLACE_SOURCE}"; then
+    :
+  else
+    printf 'Could not add Claude Code plugin marketplace: %s\n' \
+      "${MARKETPLACE_SOURCE}" >&2
+    false
+  fi
+
+  if claude plugin install "${CLAUDE_SKILLS_PLUGIN}" --scope user; then
+    printf 'Claude Code RMZ skills installed from %s\n' "${MARKETPLACE_SOURCE}"
+  else
+    printf 'Could not install Claude Code plugin: %s\n' \
+      "${CLAUDE_SKILLS_PLUGIN}" >&2
+    false
+  fi
+else
+  printf 'Claude Code not found; skipping RMZ skills for Claude Code.\n'
+fi
