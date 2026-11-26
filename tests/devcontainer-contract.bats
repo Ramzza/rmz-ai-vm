@@ -143,6 +143,7 @@ SH
     exec -T workspace bash -lc '
       set -euo pipefail
       command -v secret-tool >/dev/null
+      gh --version >/dev/null
       trap "secret-tool clear service copilot-cli smoke test >/dev/null 2>&1 || true" EXIT
       printf "%s" "synthetic-keyring-test" |
         secret-tool store --label="rmz-keyring-smoke" service copilot-cli smoke test
@@ -150,6 +151,22 @@ SH
       test "${secret_value}" = "synthetic-keyring-test"
     '
   [ "$status" -eq 0 ] || { printf '%s\n' "$output" >&2; false; }
+}
+
+@test "PRD-011: devcontainer installs latest gh from GitHub's official stable repository" {
+  local dockerfile="${DEVCONTAINER_DIRECTORY}/Dockerfile"
+  grep -F -q 'install -d -m 0755 /etc/apt/keyrings' "${dockerfile}"
+  grep -F -q 'curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg' "${dockerfile}"
+  grep -F -q 'chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg' "${dockerfile}"
+  grep -F -q '"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list' "${dockerfile}"
+  grep -F -q 'apt-get install --yes --no-install-recommends nodejs gh' "${dockerfile}"
+  ! grep -E -q '(^|[[:space:]])gh=[^[:space:]]' "${dockerfile}"
+
+  # The repository must be configured before the apt-get update that precedes the gh install.
+  local source_line install_line
+  source_line="$(grep -n -F '/etc/apt/sources.list.d/github-cli.list' "${dockerfile}" | head -n 1 | cut -d: -f1)"
+  install_line="$(grep -n -F 'no-install-recommends nodejs gh' "${dockerfile}" | head -n 1 | cut -d: -f1)"
+  [ -n "${source_line}" ] && [ -n "${install_line}" ] && [ "${source_line}" -lt "${install_line}" ]
 }
 
 @test "PRD-012: devcontainer installs the Android build toolchain" {

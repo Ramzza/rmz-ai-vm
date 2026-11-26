@@ -29,9 +29,13 @@ RUN mkdir -p /usr/share/man/man1 \
         unzip \
         wget \
     && ln -s "/usr/lib/jvm/java-25-openjdk-$(dpkg --print-architecture)" /usr/lib/jvm/java-25-openjdk \
+    && install -d -m 0755 /etc/apt/keyrings \
+    && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get update \
-    && apt-get install --yes --no-install-recommends nodejs \
+    && apt-get install --yes --no-install-recommends nodejs gh \
     && curl -fsSL https://gh.io/copilot-install | bash \
     && groupadd --gid 1000 vscode \
     && useradd --uid 1000 --gid vscode --create-home --shell /bin/bash vscode \
