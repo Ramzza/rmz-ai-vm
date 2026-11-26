@@ -152,6 +152,74 @@ SH
   [ "$status" -eq 0 ] || { printf '%s\n' "$output" >&2; false; }
 }
 
+@test "PRD-012: devcontainer installs the Android build toolchain" {
+  local dockerfile="${DEVCONTAINER_DIRECTORY}/Dockerfile"
+  local package
+  for package in openjdk-25-jdk-headless unzip wget git curl; do
+    grep -E -q "^[[:space:]]+${package}([[:space:]]|$)" "${dockerfile}" ||
+      { printf 'Missing APT package %s\n' "${package}" >&2; false; }
+  done
+
+  grep -F -q 'ln -s "/usr/lib/jvm/java-25-openjdk-$(dpkg --print-architecture)" /usr/lib/jvm/java-25-openjdk' "${dockerfile}"
+  grep -F -x -q 'ENV JAVA_HOME=/usr/lib/jvm/java-25-openjdk' "${dockerfile}"
+  grep -F -x -q 'ENV ANDROID_HOME=/opt/android-sdk' "${dockerfile}"
+  grep -F -x -q 'ENV ANDROID_SDK_ROOT=/opt/android-sdk' "${dockerfile}"
+  grep -F -x -q 'ENV PATH="${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${PATH}"' "${dockerfile}"
+  grep -F -q 'install -d -o vscode -g vscode -m 0755 /opt/android-sdk' "${dockerfile}"
+
+  grep -E -q '^ARG ANDROID_CMDLINE_TOOLS_BUILD=[0-9]+$' "${dockerfile}"
+  grep -E -q '^ARG ANDROID_CMDLINE_TOOLS_SHA1=[0-9a-f]{40}$' "${dockerfile}"
+  grep -E -q '^ARG ANDROID_PLATFORM=android-[0-9.]+$' "${dockerfile}"
+  grep -E -q '^ARG ANDROID_BUILD_TOOLS=[0-9]+\.[0-9]+\.[0-9]+$' "${dockerfile}"
+  grep -F -q 'https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_CMDLINE_TOOLS_BUILD}_latest.zip' "${dockerfile}"
+  grep -F -q 'sha1sum --check --strict' "${dockerfile}"
+  grep -F -q '"${ANDROID_HOME}/cmdline-tools/latest"' "${dockerfile}"
+  grep -F -q 'yes | sdkmanager --licenses' "${dockerfile}"
+  grep -F -q 'sdkmanager --install platform-tools "platforms;${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}"' "${dockerfile}"
+
+  # The SDK is populated by vscode so Gradle can add components the project needs.
+  local user_line sdk_line
+  user_line="$(grep -n -x 'USER vscode' "${dockerfile}" | head -n 1 | cut -d: -f1)"
+  sdk_line="$(grep -n -F 'sdkmanager --install' "${dockerfile}" | head -n 1 | cut -d: -f1)"
+  [ -n "${user_line}" ] && [ -n "${sdk_line}" ] && [ "${user_line}" -lt "${sdk_line}" ]
+}
+
+@test "PRD-012: Android toolchain runs in the container" {
+  if [[ "${RUN_DEVCONTAINER_SMOKE:-0}" != "1" ]]; then
+    skip "set RUN_DEVCONTAINER_SMOKE=1 to run the Docker integration test"
+  fi
+
+  COMPOSE_PROJECT_NAME="rmz-android-smoke-$$"
+  COMPOSE_PROJECT_STARTED=1
+  run docker compose \
+    --project-name "${COMPOSE_PROJECT_NAME}" \
+    --file "${DEVCONTAINER_DIRECTORY}/compose.yaml" \
+    up --build --detach workspace
+  [ "$status" -eq 0 ] || { printf '%s\n' "$output" >&2; false; }
+
+  run docker compose \
+    --project-name "${COMPOSE_PROJECT_NAME}" \
+    --file "${DEVCONTAINER_DIRECTORY}/compose.yaml" \
+    exec -T workspace bash -c '
+      set -euo pipefail
+      test "${ANDROID_HOME}" = /opt/android-sdk
+      test "${ANDROID_SDK_ROOT}" = /opt/android-sdk
+      test "${JAVA_HOME}" = /usr/lib/jvm/java-25-openjdk
+      test "$(command -v java)" = "${JAVA_HOME}/bin/java"
+      java -version 2>&1 | grep -E -q "version \"25[.\"]"
+      test "$(command -v sdkmanager)" = "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+      test "$(command -v adb)" = "${ANDROID_HOME}/platform-tools/adb"
+      adb version >/dev/null
+      installed="$(sdkmanager --list_installed 2>/dev/null)"
+      grep -E -q "^[[:space:]]*platform-tools[[:space:]]" <<<"${installed}"
+      grep -E -q "^[[:space:]]*platforms;android-" <<<"${installed}"
+      grep -E -q "^[[:space:]]*build-tools;" <<<"${installed}"
+      test -w "${ANDROID_HOME}"
+      command -v git unzip curl wget >/dev/null
+    '
+  [ "$status" -eq 0 ] || { printf '%s\n' "$output" >&2; false; }
+}
+
 @test "PRD-011: README documents Docker installation on Windows and Ubuntu" {
   grep -F -q \
     'winget install --id Docker.DockerDesktop --exact --accept-source-agreements --accept-package-agreements' \

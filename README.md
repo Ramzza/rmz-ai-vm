@@ -81,11 +81,13 @@ Log out and back in for the Docker group change to take effect. Membership in th
 
 ## Use the devcontainer
 
-The `.devcontainer` directory configures a Linux container with Copilot CLI, Claude Code, Node.js v22, and Python 3.15. It mounts the parent of this repository at `/workspace`, so this repository and sibling projects are available in the container.
+The `.devcontainer` directory configures a Linux container with Copilot CLI, Claude Code, Node.js v22, Python 3.15, and an Android build toolchain (OpenJDK 25 and the Android SDK). It mounts the parent of this repository at `/workspace`, so this repository and sibling projects are available in the container.
 
 Copilot CLI `/login` credentials use the container's GNOME Keyring and persist in a Docker volume across container stop, recreation, and removal. For headless startup, the keyring is automatically created and unlocked with an empty passphrase; the volume is not protected by a keyring password, and anyone with access to Docker can access its contents.
 
 Claude Code is installed for the container user; run `claude` and log in once. Its configuration and credentials persist in the `claude-config` Docker volume across container recreation and removal.
+
+For Android development, the image includes OpenJDK 25, the Android SDK command-line tools, `platform-tools` (`adb`), `platforms;android-37.0`, and `build-tools;37.0.0`, with all SDK licenses accepted. `JAVA_HOME`, `ANDROID_HOME`, and `ANDROID_SDK_ROOT` (`/opt/android-sdk`) are set, and `sdkmanager` and `adb` are on `PATH`. Build with the project's Gradle wrapper (`./gradlew`), which downloads Gradle on first use and needs network access. To match a project's `compileSdk` and build tools, change the `ANDROID_PLATFORM` and `ANDROID_BUILD_TOOLS` defaults in `.devcontainer/Dockerfile`; the next `rmz-container` launch rebuilds the image. The SDK is writable by the container user, so Gradle can also download missing components itself.
 
 VS Code Dev Containers initializes Copilot after workspace creation using the same `provision/copilot-init.sh` script as the VM: it registers the RMZ marketplace, links repository instructions, and applies managed settings. The Windows `rmz-container` command runs this initialization before opening its shell. The `rmz-ai-skills` plugin remains a separate install:
 
